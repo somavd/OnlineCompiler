@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Online Code Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+    <style>
+        #editor { border: 1px solid #ccc; height: 300px; }
+    </style>
+</head>
+<body>
+    <h2>Code Editor</h2>
+
+    <form action="/run" method="post">
+        <label>Language:</label>
+        <select name="language" id="language">
+            <option value="cpp">C++</option>
+        </select>
+        <br><br>
+        <textarea id="editor" name="code">// Write your C++ code here</textarea>
+        <br>
+        <button type="submit">Run Code</button>
+    </form>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/clike/clike.min.js"></script>
+    <script>
+        var editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+            lineNumbers: true,
+            mode: "text/x-c++src"
+        });
+    </script>
+</body>
+</html>
+
+
