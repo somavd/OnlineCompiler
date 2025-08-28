@@ -72,16 +72,14 @@ int main() {
 
             res["stderr"] = exec_cmd("cat tmp/" + id + "/compile_err.txt");
             res["stdout"] = exec_cmd("cat tmp/" + id + "/prog_out.txt");
-            res["status"] = exec_cmd("cat tmp/" + id + "/prog_err.txt");
 
         } else {
 	    res["stdout"] = "Only C++ Supported";
 	    res["stderr"] = "";
-	    res["status"] = "";
         }
 
         // Cleanup temp folder
-        // fs::remove_all("tmp/" + id);
+        fs::remove_all("tmp/" + id);
 
 	return crow::response(res);
     });
