@@ -10,16 +10,21 @@
 <body>
     <h2>Code Editor</h2>
 
-    <form action="/run" method="post">
         <label>Language:</label>
-        <select name="language" id="language">
+        <select name="language" id="lang">
             <option value="cpp">C++</option>
         </select>
         <br><br>
         <textarea id="editor" name="code">// Write your C++ code here</textarea>
         <br>
-        <button type="submit">Run Code</button>
-    </form>
+	<button onclick="runCode()">Run</button>
+
+    <h3>Status:</h3>
+    <pre id="status"></pre>
+    <h3>Output:</h3>
+    <pre id="output"></pre>
+    <h3>Error:</h3>
+    <pre id="error"></pre>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/clike/clike.min.js"></script>
@@ -29,6 +34,22 @@
             mode: "text/x-c++src"
         });
     </script>
+    <script>
+      async function runCode() {
+        const lang = document.getElementById('lang').value;
+        const code = document.getElementById('editor').value;
+        const response = await fetch('/run', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({language: lang, code: code, timeout: 10})
+        });
+        const result = await response.json();
+        document.getElementById('status').innerText = result.status;
+        document.getElementById('output').innerText = result.stdout
+        document.getElementById('error').innerText = result.stderr;
+       }
+    </script>
+
 </body>
 </html>
 
