@@ -1,0 +1,10 @@
+build/
+tmp/
+data/
+.env
+*.log
+*.pdf
+.DS_Store
+*.o
+*.d
+compile_commands.json

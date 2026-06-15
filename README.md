@@ -1,88 +1,101 @@
 # Online Compiler
 
-A web-based code compiler that allows users to write, compile, and execute C++ code directly in the browser. The application uses Docker containers for secure, isolated code execution.
+A high-performance web-based code compiler written in **C++17** using the [Crow](https://crowcpp.org/) web framework. Executes user code inside Docker containers with resource limits and timeout enforcement.
 
 ## Features
 
-- **Web-based Code Editor**: Interactive code editor with syntax highlighting using CodeMirror
-- **C++ Support**: Compile and execute C++ code with gcc compiler
-- **Secure Execution**: Code runs in isolated Docker containers for security
-- **Real-time Output**: View compilation errors and program output immediately
-- **RESTful API**: Clean API for code compilation and execution
+- **C++ backend** — Compiled server binary, sub-millisecond routing, native multithreading
+- **Multi-language execution** — C++, Python, JavaScript
+- **Docker sandboxing** — Isolated containers with `--network none`, `--read-only`, memory/CPU/PID limits
+- **POSIX execution engine** — Direct `fork/execvp/waitpid` with `SIGKILL` timeout, `select()`-based pipe I/O (no deadlocks)
+- **Rate limiting** — Thread-safe per-IP with automatic stale entry cleanup
+- **CodeMirror editor** — Syntax highlighting, Dracula theme, Ctrl+Enter to run
+- **Graceful shutdown** — Handles SIGINT/SIGTERM cleanly
+- **Input validation** — Rejects malformed requests before any execution
+- **Output truncation** — Caps stdout/stderr at 64KB
 
 ## Tech Stack
 
-- **Backend**: C++ with Crow web framework
-- **Frontend**: HTML, JavaScript, CodeMirror for syntax highlighting
-- **Containerization**: Docker for isolated code execution
-- **Compiler**: GCC (via Docker image `gcc:latest`)
+- **Backend**: C++17, Crow web framework, POSIX syscalls
+- **Build**: CMake 3.14+ with FetchContent (auto-downloads Crow & Asio)
+- **Frontend**: HTML/CSS/JS with CodeMirror 5 (loaded via CDN)
+- **Execution**: Docker containers (`gcc:latest`, `python:3-slim`, `node:20-slim`)
 
 ## Requirements
 
-- C++ compiler with C++17 support
-- Crow web framework
+- C++17 compiler (g++ 9+ / clang++ 10+)
+- CMake 3.14+
 - Docker installed and running
-- Linux/macOS (for Docker volume mounting)
+- Current user in the `docker` group (no sudo needed)
+- Internet connection (first build downloads Crow & Asio; frontend loads CodeMirror from CDN)
 
-## Installation
+## Build & Run
 
-1. Clone the repository:
 ```bash
+# Clone
 git clone <repository-url>
 cd OnlineCompiler
+
+# Build (first build takes ~60s to fetch dependencies)
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+
+# Run (must run from build/ directory)
+./online_compiler
 ```
 
-2. Install Crow framework (if not already installed):
+Open **http://localhost:3000** in your browser.
+
+> **Important:** The server looks for `public/` relative to the working directory.
+> CMake copies `public/` into `build/` automatically, so always run from the `build/` directory.
+
+### macOS Notes
+
+- On macOS, use `make -j$(sysctl -n hw.ncpu)` instead of `make -j$(nproc)`.
+- If using Colima for Docker, ensure it is running: `colima start`
+
+### Quick Test (without browser)
+
 ```bash
-# Using package manager or build from source
-# Refer to Crow documentation for installation
+# Health check — should return the HTML page
+curl -s http://localhost:3000 | head -5
+
+# Run Python code
+curl -s -X POST http://localhost:3000/api/run \
+  -H 'Content-Type: application/json' \
+  -d '{"language":"python","code":"print(\"hello\")"}'
 ```
 
-3. Ensure Docker is running:
-```bash
-docker --version
-```
+## API
 
-4. Build the server:
-```bash
-g++ -std=c++17 ServerCompiler.cpp -o Server -l crow -pthread
-```
+### POST /api/run
 
-## Usage
-
-1. Start the server:
-```bash
-./Server
-```
-
-2. Open your browser and navigate to:
-```
-http://localhost:18080
-```
-
-3. Write C++ code in the editor and click "Run" to compile and execute
-
-## API Endpoints
-
-### GET /
-Serves the web-based code editor interface.
-
-### POST /run
-Compiles and executes the submitted code.
-
-**Request Body:**
+**Request:**
 ```json
 {
-  "language": "cpp",
-  "code": "#include <iostream>\nint main() {\n    std::cout << \"Hello, World!\";\n    return 0;\n}"
+  "language": "python",
+  "code": "print('hello')",
+  "input": "optional stdin"
 }
 ```
 
 **Response:**
 ```json
 {
-  "stdout": "Hello, World!",
-  "stderr": ""
+  "stdout": "hello\n",
+  "stderr": "",
+  "exitCode": 0,
+  "timedOut": false
+}
+```
+
+**Supported languages:** `cpp`, `python`, `javascript`
+
+**Error responses** (400/413/429):
+```json
+{
+  "error": "Missing or invalid 'language' field"
 }
 ```
 
@@ -90,49 +103,41 @@ Compiles and executes the submitted code.
 
 ```
 OnlineCompiler/
-├── ServerCompiler.cpp    # Main server implementation
-├── Server                # Compiled executable
-├── htmls/
-│   └── editor.html       # Web-based code editor
-├── tmp/                  # Temporary directory for code execution (created at runtime)
+├── src/
+│   ├── main.cpp             # Crow app, routes, signal handling, static serving
+│   ├── executor.hpp/cpp     # Docker runner (fork/exec, select(), timeout, cleanup)
+│   ├── languages.hpp        # Language config (image, compile/run commands)
+│   ├── config.hpp           # Env-based configuration with safe parsing
+│   ├── validator.hpp        # JSON request validation
+│   └── rate_limiter.hpp/cpp # Thread-safe rate limiter with stale purge
+├── public/
+│   ├── index.html           # CodeMirror editor UI
+│   ├── styles.css           # Dark theme, side-by-side layout
+│   └── script.js            # Editor init, language switching, API calls
+├── CMakeLists.txt           # Build system (auto-fetches Crow + Asio)
+├── .env.example
+├── .gitignore
 └── README.md
 ```
 
-## How It Works
+## Configuration (environment variables)
 
-1. User submits code via the web editor
-2. Server generates a unique ID for the execution session
-3. Code is saved to a temporary directory
-4. Docker container mounts the temp directory and compiles the code
-5. If compilation succeeds, the program is executed
-6. Output and errors are captured and returned to the user
-7. Temporary files are cleaned up after execution
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Server port |
+| `DOCKER_TIMEOUT_SECONDS` | `10` | Max execution time per request |
+| `DOCKER_MEMORY_LIMIT` | `128m` | Container memory cap |
+| `DOCKER_CPU_LIMIT` | `0.5` | CPU cores allowed per container |
+| `DOCKER_PIDS_LIMIT` | `50` | Max processes in container |
+| `RATE_LIMIT_MAX_REQUESTS` | `10` | Requests per window per IP |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window (seconds) |
 
-## Security
+Set these in your shell or copy `.env.example` (note: the C++ server reads `std::getenv()`, not `.env` files directly — export them or use `env $(cat .env) ./online_compiler`).
 
-- Code execution is isolated in Docker containers
-- Each execution uses a unique temporary directory
-- Containers are removed after execution (`--rm` flag)
-- No persistent storage of user code
+## Stopping the Server
 
-## Current Limitations
-
-- Only C++ language is supported
-- No timeout enforcement for long-running programs
-- No resource limits (CPU/memory) configured
-
-## Future Enhancements
-
-- Support for additional languages (Python, Java, etc.)
-- Add execution timeout and resource limits
-- User authentication and session management
-- Code history and saved programs
-- Enhanced error reporting and debugging features
+Press **Ctrl+C** — the server handles SIGINT gracefully and shuts down cleanly.
 
 ## License
 
-[Add your license information here]
-
-## Author
-
-[Add your name/contact information here]
+ISC

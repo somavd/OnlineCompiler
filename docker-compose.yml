@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  compiler:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount Docker socket so the server can spawn sibling containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist SQLite database
+      - compiler-data:/app/data
+    environment:
+      - PORT=3000
+      - DOCKER_TIMEOUT_SECONDS=10
+      - DOCKER_MEMORY_LIMIT=128m
+      - DOCKER_CPU_LIMIT=0.5
+      - DOCKER_PIDS_LIMIT=50
+      - RATE_LIMIT_MAX_REQUESTS=10
+      - RATE_LIMIT_WINDOW_SECONDS=60
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  compiler-data:

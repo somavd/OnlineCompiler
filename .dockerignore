@@ -1,0 +1,12 @@
+build/
+tmp/
+data/
+.git/
+.env
+*.o
+doc/
+node_modules/
+online-code-editor/
+server/
+htmls/
+ServerCompiler.cpp
