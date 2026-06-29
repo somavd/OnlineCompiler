@@ -1,3 +1,5 @@
+const API_BASE = "http://localhost:3000";
+
 // CodeMirror mode map
 const MODES = {
   cpp: "text/x-c++src",
@@ -61,7 +63,7 @@ async function runCode() {
   const startTime = performance.now();
 
   try {
-    const response = await fetch("/api/run", {
+    const response = await fetch(`${API_BASE}/api/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ language, code, input }),
@@ -127,7 +129,7 @@ async function loadHistory() {
   const listEl = document.getElementById("historyList");
   listEl.innerHTML = "<em>Loading...</em>";
   try {
-    const res = await fetch("/api/submissions?limit=10");
+    const res = await fetch(`${API_BASE}/api/submissions?limit=5`);
     const data = await res.json();
     if (!data.submissions || data.submissions.length === 0) {
       listEl.innerHTML = "<em>No submissions yet.</em>";
@@ -136,7 +138,7 @@ async function loadHistory() {
     listEl.innerHTML = data.submissions.map(function (s) {
       const status = s.timedOut ? "timeout" : s.exitCode === 0 ? "ok" : "error";
       const icon = status === "ok" ? "\u2705" : status === "timeout" ? "\u23F1" : "\u274C";
-      const preview = s.code.split("\n")[0].slice(0, 50);
+      const preview = s.code.split("\n").slice(0, 50);
       return '<div class="history-item history-' + status + '" onclick=\'loadSubmission(' + JSON.stringify(JSON.stringify(s)) + ')\'>'
         + '<span class="history-icon">' + icon + '</span>'
         + '<span class="history-lang">' + s.language + '</span>'

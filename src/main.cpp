@@ -13,10 +13,14 @@
 
 namespace fs = std::filesystem;
 
-// JSON response helper — sets Content-Type properly
+// JSON response helper — sets Content-Type and CORS properly
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
     crow::response res(code, body.dump());
     res.set_header("Content-Type", "application/json");
+    // Allow VS Code Live Server or external origins to read the JSON response
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
     return res;
 }
 
@@ -75,6 +79,16 @@ int main() {
     // Graceful shutdown on SIGINT / SIGTERM
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
+
+    // Global OPTIONS Preflight Handler for CORS requests
+    CROW_ROUTE(app, "/api/<path>").methods("OPTIONS"_method)
+    ([](const std::string& /*path*/) {
+        crow::response res(200);
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        return res;
+    });
 
     // Serve frontend — index.html at root
     CROW_ROUTE(app, "/")([]() {
@@ -186,8 +200,10 @@ int main() {
         return jsonResponse(200, body);
     });
 
-    std::cout << "Server running on http://localhost:" << config.port << std::endl;
-    app.port(config.port).multithreaded().run();
+    std::cout << "Server running on http://0.0.0" << std::endl;
+    
+    // 💡 FIXED: Explicitly bind to 0.0.0.0 to accept network requests from Windows host
+    app.bindaddr("0.0.0.0").port(3000).multithreaded().run();
 
     std::cout << "Server stopped." << std::endl;
     return 0;

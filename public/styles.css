@@ -290,3 +290,10 @@ button:disabled {
     height: 300px;
   }
 }
+
+
+#logoutBtn{
+    background:#ef4444;
+    color:white;
+}
+

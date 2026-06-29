@@ -2,7 +2,7 @@
 FROM ubuntu:22.04 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    g++ gcc cmake make ca-certificates curl \
+    ca-certificates curl git g++ gcc cmake make \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
