@@ -297,3 +297,219 @@ button:disabled {
     color:white;
 }
 
+ /* ================= Output ================= */
+
+#stdout,
+#stderr{
+    margin:0;
+    padding:15px;
+    font-family:"JetBrains Mono","Fira Code",monospace;
+    font-size:13px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    overflow:auto;
+    background:#111827;
+}
+
+#stdout{
+    color:#4ade80;
+    min-height:180px;
+    flex:1;
+}
+
+#stderr{
+    color:#f87171;
+    min-height:90px;
+    border-top:1px solid #1f2937;
+}
+
+/* ================= Input ================= */
+
+.input-section{
+    background:#111827;
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:18px;
+}
+
+#userInput{
+    width:100%;
+    min-height:90px;
+    resize:vertical;
+    background:#0f172a;
+    color:#f8fafc;
+    border:none;
+    outline:none;
+    padding:15px;
+    font-size:14px;
+    font-family:"JetBrains Mono","Fira Code",monospace;
+}
+
+/* ================= History ================= */
+
+.history-section{
+    background:#111827;
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:18px;
+}
+
+.history-section .panel-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+#refreshHistory{
+    background:#2563eb;
+    color:white;
+    padding:6px 12px;
+    border-radius:6px;
+}
+
+#refreshHistory:hover{
+    background:#1d4ed8;
+}
+
+.history-list{
+    max-height:230px;
+    overflow-y:auto;
+}
+
+.history-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 15px;
+    border-bottom:1px solid #1f2937;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.history-item:hover{
+    background:#1e293b;
+}
+
+.history-icon{
+    font-size:18px;
+}
+
+.history-lang{
+    width:80px;
+    color:#60a5fa;
+    font-weight:600;
+}
+
+.history-preview{
+    flex:1;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    color:#d1d5db;
+    font-family:"JetBrains Mono",monospace;
+}
+
+.history-time{
+    color:#94a3b8;
+    font-size:12px;
+}
+
+/* ================= Shortcut ================= */
+
+.shortcut-hint{
+    text-align:center;
+    margin-top:10px;
+    color:#64748b;
+    font-size:13px;
+}
+
+/* ================= Scrollbar ================= */
+
+::-webkit-scrollbar{
+    width:8px;
+    height:8px;
+}
+
+::-webkit-scrollbar-track{
+    background:#111827;
+}
+
+::-webkit-scrollbar-thumb{
+    background:#2563eb;
+    border-radius:10px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+    background:#3b82f6;
+}
+
+/* ================= Logout ================= */
+
+#logoutBtn{
+    background:#dc2626;
+    color:white;
+    padding:10px 20px;
+    border-radius:8px;
+    margin-top:15px;
+}
+
+#logoutBtn:hover{
+    background:#b91c1c;
+}
+
+/* ================= Responsive ================= */
+
+@media(max-width:900px){
+
+    .editor-wrapper{
+        flex-direction:column;
+    }
+
+    .panel-editor,
+    .panel-output{
+        width:100%;
+    }
+
+    .CodeMirror{
+        height:350px !important;
+    }
+
+    .toolbar{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .toolbar-actions{
+        justify-content:space-between;
+        width:100%;
+    }
+
+    #runBtn,
+    #clearBtn{
+        flex:1;
+    }
+
+}
+
+@media(max-width:600px){
+
+    .container{
+        padding:15px;
+    }
+
+    header h1{
+        font-size:1.5rem;
+    }
+
+    .history-item{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .history-lang{
+        width:auto;
+    }
+
+}

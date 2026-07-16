@@ -6,6 +6,13 @@
 
 struct sqlite3;
 
+struct Question {
+    int id = 0;
+    std::string title;
+    std::string category;
+    std::string difficulty;
+};
+
 struct Submission {
     int id = 0;
     std::string language;
@@ -30,7 +37,15 @@ public:
     int saveSubmission(const Submission& sub);
 
     // Retrieve recent submissions
-    std::vector<Submission> getSubmissions(int limit = 20, const std::string& language = "");
+    std::vector<Submission> getSubmissions(
+        int limit = 20,
+        const std::string& language = ""
+    );
+
+    // Question management
+    bool addQuestion(const Question& question);
+    std::vector<Question> getQuestions();
+    bool deleteQuestion(int id);
 
 private:
     void init();

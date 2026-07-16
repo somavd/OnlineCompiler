@@ -1,0 +1,536 @@
+/* ===========================
+   COMPILER - VS CODE THEME
+=========================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Poppins:wght@400;500;600;700&display=swap');
+
+/* RESET & BASE */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #0b1120;
+    font-family: 'Poppins', sans-serif;
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
+
+/* ===========================
+   SCROLLBAR
+=========================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111827;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2563eb;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
+
+/* ===========================
+   CONTAINER
+=========================== */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px;
+}
+
+/* ===========================
+   HEADER
+=========================== */
+header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+h1 {
+    color: #60a5fa;
+    margin: 0 0 8px;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #94a3b8;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ===========================
+   TOOLBAR
+=========================== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #111827;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ===========================
+   SELECT
+=========================== */
+select {
+    padding: 10px 14px;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    background: #1f2937;
+    color: #e2e8f0;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ===========================
+   BUTTONS
+=========================== */
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+button:hover {
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* RUN BUTTON */
+#runBtn {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+#runBtn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* CLEAR BUTTON */
+#clearBtn {
+    background: #1f2937;
+    color: #d1d5db;
+    border: 1px solid #374151;
+}
+
+#clearBtn:hover {
+    background: #374151;
+    border-color: #4b5563;
+}
+
+/* LOGOUT BUTTON */
+#logoutBtn {
+    background: #dc2626;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+#logoutBtn:hover {
+    background: #b91c1c;
+    box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
+}
+
+/* HISTORY REFRESH BUTTON */
+#refreshHistory {
+    background: #2563eb;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+#refreshHistory:hover {
+    background: #1d4ed8;
+}
+
+/* ===========================
+   STATUS INDICATOR
+=========================== */
+.status {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-ok {
+    color: #4ade80;
+}
+
+.status-error {
+    color: #f87171;
+}
+
+/* ===========================
+   EDITOR LAYOUT
+=========================== */
+.editor-wrapper {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.panel {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #111827;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.panel-editor {
+    flex: 3;
+    min-width: 0;
+}
+
+.panel-output {
+    flex: 2;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.panel-header-error {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ===========================
+   CODEMIRROR THEME
+=========================== */
+.CodeMirror {
+    height: 450px;
+    background: #0f172a !important;
+    color: #e5e7eb !important;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.CodeMirror-gutters {
+    background: #0f172a !important;
+    border-right: 1px solid #1e293b !important;
+}
+
+.CodeMirror-linenumber {
+    color: #64748b !important;
+}
+
+.CodeMirror-cursor {
+    border-left: 2px solid #60a5fa !important;
+}
+
+.CodeMirror-selected {
+    background: #1e3a8a55 !important;
+}
+
+.CodeMirror-focused .CodeMirror-selected {
+    background: #1e3a8a77 !important;
+}
+
+.CodeMirror-activeline-background {
+    background: #111827 !important;
+}
+
+/* SYNTAX HIGHLIGHTING - DRACULA THEME */
+.cm-keyword {
+    color: #c084fc !important;
+}
+
+.cm-def {
+    color: #60a5fa !important;
+}
+
+.cm-variable {
+    color: #f8fafc !important;
+}
+
+.cm-variable-2 {
+    color: #38bdf8 !important;
+}
+
+.cm-number {
+    color: #fbbf24 !important;
+}
+
+.cm-string {
+    color: #4ade80 !important;
+}
+
+.cm-comment {
+    color: #6b7280 !important;
+    font-style: italic;
+}
+
+.cm-operator {
+    color: #f87171 !important;
+}
+
+.cm-builtin {
+    color: #22d3ee !important;
+}
+
+.cm-atom {
+    color: #fb7185 !important;
+}
+
+.cm-tag {
+    color: #38bdf8 !important;
+}
+
+.cm-attribute {
+    color: #fbbf24 !important;
+}
+
+/* ===========================
+   OUTPUT PANELS
+=========================== */
+#stdout,
+#stderr {
+    margin: 0;
+    padding: 15px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: auto;
+    background: #0f172a;
+}
+
+#stdout {
+    color: #4ade80;
+    flex: 1;
+    min-height: 120px;
+    max-height: 300px;
+}
+
+#stderr {
+    color: #f87171;
+    min-height: 80px;
+    max-height: 180px;
+}
+
+/* ===========================
+   INPUT SECTION
+=========================== */
+.input-section {
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.input-section .panel-header {
+    display: block;
+}
+
+#userInput {
+    width: 100%;
+    min-height: 100px;
+    border: none;
+    outline: none;
+    resize: vertical;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 14px;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+#userInput::placeholder {
+    color: #6b7280;
+}
+
+/* ===========================
+   HISTORY SECTION
+=========================== */
+.history-section {
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+.history-section .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.history-item:hover {
+    background: #1f2937;
+}
+
+.history-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #94a3b8;
+}
+
+.history-lang {
+    min-width: 70px;
+    color: #60a5fa;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.history-preview {
+    flex: 1;
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.history-time {
+    color: #6b7280;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* ===========================
+   SHORTCUT HINT
+=========================== */
+.shortcut-hint {
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 15px;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+@media (max-width: 900px) {
+    .editor-wrapper {
+        flex-direction: column;
+    }
+
+    .panel-editor,
+    .panel-output {
+        width: 100%;
+    }
+
+    .CodeMirror {
+        height: 350px !important;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-actions {
+        width: 100%;
+    }
+
+    .toolbar-actions button,
+    .toolbar-actions select {
+        flex: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .CodeMirror {
+        height: 300px !important;
+    }
+
+    .history-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .history-lang {
+        width: auto;
+    }
+
+    .toolbar {
+        gap: 8px;
+    }
+
+    button {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+}

@@ -17,7 +17,6 @@ namespace fs = std::filesystem;
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
     crow::response res(code, body.dump());
     res.set_header("Content-Type", "application/json");
-    // Allow VS Code Live Server or external origins to read the JSON response
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
     res.set_header("Access-Control-Allow-Headers", "Content-Type");
@@ -80,7 +79,7 @@ int main() {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    // Global OPTIONS Preflight Handler for CORS requests
+    // Global OPTIONS preflight handler for all /api/* endpoints
     CROW_ROUTE(app, "/api/<path>").methods("OPTIONS"_method)
     ([](const std::string& /*path*/) {
         crow::response res(200);
@@ -163,6 +162,78 @@ int main() {
         body["stderr"] = result.stderrStr;
         body["exitCode"] = result.exitCode;
         body["timedOut"] = result.timedOut;
+        return jsonResponse(200, body);
+    });
+
+    // GET /api/questions — retrieve all questions
+    CROW_ROUTE(app, "/api/questions").methods("GET"_method)
+    ([&db](const crow::request& /*req*/) {
+        auto questions = db.getQuestions();
+
+        crow::json::wvalue body;
+        std::vector<crow::json::wvalue> items;
+        for (const auto& q : questions) {
+            crow::json::wvalue item;
+            item["id"] = q.id;
+            item["title"] = q.title;
+            item["category"] = q.category;
+            item["difficulty"] = q.difficulty;
+            items.push_back(std::move(item));
+        }
+        body["questions"] = std::move(items);
+        return jsonResponse(200, body);
+    });
+
+    // POST /api/questions — add a new question
+    CROW_ROUTE(app, "/api/questions").methods("POST"_method)
+    ([&db](const crow::request& req) {
+        auto jsonBody = crow::json::load(req.body);
+        if (!jsonBody) {
+            return jsonError(400, "Invalid JSON body");
+        }
+
+        if (!jsonBody.has("title")) {
+    return jsonError(400, "Title is required");
+    }
+
+    std::string title = jsonBody["title"].s();
+
+    if (title.empty()) {
+    return jsonError(400, "Title cannot be empty");
+    }
+
+    std::string category = "";
+if (jsonBody.has("category")) {
+    category = jsonBody["category"].s();
+}
+
+std::string difficulty = "";
+if (jsonBody.has("difficulty")) {
+    difficulty = jsonBody["difficulty"].s();
+}
+
+        Question question;
+        question.title = title;
+        question.category = category;
+        question.difficulty = difficulty;
+
+        if (!db.addQuestion(question)) {
+            return jsonError(500, "Failed to add question");
+        }
+
+        crow::json::wvalue body;
+        body["success"] = true;
+        return jsonResponse(200, body);
+    });
+
+    // DELETE /api/questions/<int> — delete a question
+    CROW_ROUTE(app, "/api/questions/<int>").methods("DELETE"_method)
+    ([&db](int id) {
+        bool deleted = db.deleteQuestion(id);
+
+        crow::json::wvalue body;
+        body["success"] = deleted;
+        body["id"] = id;
         return jsonResponse(200, body);
     });
 

@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS submissions (
     timed_out   INTEGER DEFAULT 0,
     created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS questions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    title       TEXT    NOT NULL,
+    category    TEXT    NOT NULL,
+    difficulty  TEXT    NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_lang ON submissions(language);
 CREATE INDEX IF NOT EXISTS idx_time ON submissions(created_at);
 )";
@@ -148,4 +154,95 @@ std::vector<Submission> Database::getSubmissions(int limit, const std::string& l
 
     sqlite3_finalize(stmt);
     return results;
+}
+
+bool Database::addQuestion(const Question& question) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    const char* sql = R"(
+        INSERT INTO questions (title, category, difficulty)
+        VALUES (?, ?, ?)
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, question.title.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, question.category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
+
+    rc = sqlite3_step(stmt);
+    bool success = (rc == SQLITE_DONE);
+    if (!success) {
+        std::cerr << "DB insert error: " << sqlite3_errmsg(db_) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+std::vector<Question> Database::getQuestions() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<Question> results;
+
+    const char* sql = R"(
+        SELECT id, title, category, difficulty
+        FROM questions
+        ORDER BY id ASC
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
+        return results;
+    }
+
+    auto getText = [](sqlite3_stmt* st, int col) -> std::string {
+        auto* p = sqlite3_column_text(st, col);
+        return p ? reinterpret_cast<const char*>(p) : "";
+    };
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        Question q;
+        q.id = sqlite3_column_int(stmt, 0);
+        q.title = getText(stmt, 1);
+        q.category = getText(stmt, 2);
+        q.difficulty = getText(stmt, 3);
+        results.push_back(std::move(q));
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+bool Database::deleteQuestion(int id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    const char* sql = R"(
+        DELETE FROM questions
+        WHERE id = ?
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    rc = sqlite3_step(stmt);
+    bool success = (rc == SQLITE_DONE);
+    if (!success) {
+        std::cerr << "DB delete error: " << sqlite3_errmsg(db_) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return success;
 }

@@ -3,19 +3,30 @@
 <head>
     <title>Redirect</title>
 </head>
+
 <body>
 
 <script>
-// 💡 Add this line to manually clear past sessions during testing
-localStorage.removeItem("loggedIn"); 
+// ===============================
+// SAFE ROLE BASED REDIRECT
+// ===============================
 
-if(localStorage.getItem("loggedIn") === "true")
-{
-    location.href = "compiler.html";
-}
+const loggedIn = localStorage.getItem("loggedIn");
+const role = localStorage.getItem("role");
 
-else
-{
+if (loggedIn === "true") {
+
+    if (role === "admin") {
+        location.href = "admin_dashboard.html";
+    } 
+    else if (role === "user") {
+        location.href = "compiler.html";
+    } 
+    else {
+        location.href = "login.html";
+    }
+
+} else {
     location.href = "login.html";
 }
 </script>
