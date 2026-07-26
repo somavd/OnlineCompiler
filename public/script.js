@@ -123,39 +123,63 @@ function clearCode() {
   editor.focus();
 }
 
+// Cached submissions for click-to-load
+let historyCache = [];
+
 // Load submission history
 async function loadHistory() {
   const listEl = document.getElementById("historyList");
-  listEl.innerHTML = "<em>Loading...</em>";
+  listEl.textContent = "Loading...";
   try {
     const res = await fetch(`${API_BASE}/api/submissions?limit=5`);
     const data = await res.json();
-    if (!data.submissions || data.submissions.length === 0) {
-      listEl.innerHTML = "<em>No submissions yet.</em>";
+    historyCache = data.submissions || [];
+    if (historyCache.length === 0) {
+      listEl.textContent = "No submissions yet.";
       return;
     }
-    listEl.innerHTML = data.submissions.map(function (s) {
+    // Build DOM safely — no innerHTML with user data
+    listEl.innerHTML = "";
+    historyCache.forEach(function (s, idx) {
       const status = s.timedOut ? "timeout" : s.exitCode === 0 ? "ok" : "error";
       const icon = status === "ok" ? "\u2705" : status === "timeout" ? "\u23F1" : "\u274C";
-      const preview = s.code.split("\n").slice(0, 50);
-      return '<div class="history-item history-' + status + '" onclick=\'loadSubmission(' + JSON.stringify(JSON.stringify(s)) + ')\'>'
-        + '<span class="history-icon">' + icon + '</span>'
-        + '<span class="history-lang">' + s.language + '</span>'
-        + '<span class="history-preview">' + escapeHtml(preview) + '</span>'
-        + '<span class="history-time">' + s.createdAt + '</span>'
-        + '</div>';
-    }).join("");
+      const preview = s.code.split("\n")[0].slice(0, 50);
+
+      const row = document.createElement("div");
+      row.className = "history-item history-" + status;
+      row.dataset.index = idx;
+      row.addEventListener("click", function () { loadSubmission(idx); });
+
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "history-icon";
+      iconSpan.textContent = icon;
+
+      const langSpan = document.createElement("span");
+      langSpan.className = "history-lang";
+      langSpan.textContent = s.language;
+
+      const previewSpan = document.createElement("span");
+      previewSpan.className = "history-preview";
+      previewSpan.textContent = preview;
+
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "history-time";
+      timeSpan.textContent = s.createdAt;
+
+      row.appendChild(iconSpan);
+      row.appendChild(langSpan);
+      row.appendChild(previewSpan);
+      row.appendChild(timeSpan);
+      listEl.appendChild(row);
+    });
   } catch (e) {
-    listEl.innerHTML = "<em>Failed to load history.</em>";
+    listEl.textContent = "Failed to load history.";
   }
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function loadSubmission(jsonStr) {
-  const s = JSON.parse(jsonStr);
+function loadSubmission(idx) {
+  const s = historyCache[idx];
+  if (!s) return;
   document.getElementById("language").value = s.language;
   editor.setOption("mode", MODES[s.language]);
   editor.setValue(s.code);

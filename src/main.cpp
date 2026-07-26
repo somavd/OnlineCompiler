@@ -10,8 +10,12 @@
 #include <sstream>
 #include <iostream>
 #include <csignal>
+#include <cstring>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
+
+static const size_t MAX_BODY_BYTES = 1024 * 1024;  // 1MB
 
 // JSON response helper — sets Content-Type and CORS properly
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
@@ -54,9 +58,13 @@ static std::string getMimeType(const std::string& ext) {
 
 // Global app pointer for graceful shutdown
 static crow::SimpleApp* g_app = nullptr;
+static volatile sig_atomic_t g_shutdownRequested = 0;
 
 static void signalHandler(int sig) {
-    std::cout << "\nShutting down (signal " << sig << ")..." << std::endl;
+    // Only async-signal-safe calls here
+    g_shutdownRequested = 1;
+    const char msg[] = "\nShutdown requested...\n";
+    (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
     if (g_app) g_app->stop();
 }
 
@@ -104,13 +112,11 @@ int main() {
     CROW_ROUTE(app, "/public/<path>")([](const std::string& filePath) {
         std::string fullPath = "public/" + filePath;
 
-        // Prevent path traversal
-        if (filePath.find("..") != std::string::npos) {
+        // Prevent path traversal via canonical path check
+        auto canonical = fs::weakly_canonical(fullPath);
+        auto publicRoot = fs::weakly_canonical("public");
+        if (canonical.string().rfind(publicRoot.string(), 0) != 0) {
             return crow::response(403, "Forbidden");
-        }
-
-        if (!fs::exists(fullPath)) {
-            return crow::response(404, "Not found");
         }
 
         auto [found, content] = readFileContents(fullPath);
@@ -133,7 +139,7 @@ int main() {
         }
 
         // Request body size check (1MB)
-        if (req.body.size() > 1024 * 1024) {
+        if (req.body.size() > MAX_BODY_BYTES) {
             return jsonError(413, "Request body too large");
         }
 

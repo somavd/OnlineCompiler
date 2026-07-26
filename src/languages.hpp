@@ -37,4 +37,3 @@ inline const std::unordered_map<std::string, LangConfig>& getLanguages() {
     };
     return langs;
 }
-

@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <csignal>
+#include <cerrno>
 #include <sys/select.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -120,7 +121,10 @@ static int runProcess(
         tv.tv_usec = (ms % 1000) * 1000;
 
         int sel = select(maxFd + 1, &readfds, nullptr, nullptr, &tv);
-        if (sel < 0) break;
+        if (sel < 0) {
+            if (errno == EINTR) continue;  // Retry on signal interruption
+            break;
+        }
 
         if (!outDone && FD_ISSET(outFd, &readfds)) {
             ssize_t n = read(outFd, buf.data(), buf.size());
@@ -196,7 +200,12 @@ ExecResult executeCode(
     bool hasInput = !input.empty();
     if (hasInput) {
         std::ofstream ofs(sessionDir + "/input.txt");
-        ofs << input;
+        if (!ofs || !(ofs << input)) {
+            result.stderrStr = "Failed to write input file";
+            result.exitCode = 1;
+            fs::remove_all(sessionDir, ec);
+            return result;
+        }
     }
 
     // Build container command
