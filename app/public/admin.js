@@ -7,7 +7,7 @@
 // Backend base URL. Empty string = same origin (when pages are served by
 // the C++ server). Set to the server address if you serve the frontend
 // from a different origin.
-const API_BASE = "http://172.17.162.152:3000";
+const API_BASE = "";
 
 // STATE
 let questions = [];
@@ -237,5 +237,5 @@ function updateCounts() {
 // ===============================
 function logout() {
     localStorage.clear();
-    location.href = "login.html";
+    location.href = "/public/login.html";
 }

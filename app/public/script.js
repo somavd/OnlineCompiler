@@ -1,4 +1,4 @@
-const API_BASE = "http://172.17.162.152:3000";
+const API_BASE = "";
 // CodeMirror mode map
 const MODES = {
   cpp: "text/x-c++src",

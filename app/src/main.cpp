@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <thread>
 #include <csignal>
 #include <cstring>
 #include <unistd.h>
@@ -126,6 +127,7 @@ int main() {
         std::string ext = fs::path(fullPath).extension().string();
         auto res = crow::response(200, content);
         res.set_header("Content-Type", getMimeType(ext));
+        res.set_header("Cache-Control", "public, max-age=3600");
         return res;
     });
 
@@ -198,25 +200,13 @@ int main() {
             return jsonError(400, "Invalid JSON body");
         }
 
-        if (!jsonBody.has("title")) {
-    return jsonError(400, "Title is required");
-    }
+        if (!jsonBody.has("title") || std::string(jsonBody["title"].s()).empty()) {
+            return jsonError(400, "Title is required");
+        }
 
-    std::string title = jsonBody["title"].s();
-
-    if (title.empty()) {
-    return jsonError(400, "Title cannot be empty");
-    }
-
-    std::string category = "";
-if (jsonBody.has("category")) {
-    category = jsonBody["category"].s();
-}
-
-std::string difficulty = "";
-if (jsonBody.has("difficulty")) {
-    difficulty = jsonBody["difficulty"].s();
-}
+        std::string title = jsonBody["title"].s();
+        std::string category = jsonBody.has("category") ? std::string(jsonBody["category"].s()) : "";
+        std::string difficulty = jsonBody.has("difficulty") ? std::string(jsonBody["difficulty"].s()) : "";
 
         Question question;
         question.title = title;
@@ -303,10 +293,13 @@ if (jsonBody.has("difficulty")) {
         return jsonResponse(200, body);
     });
 
-    std::cout << "Server running on http://0.0.0" << std::endl;
-    
-    // 💡 FIXED: Explicitly bind to 0.0.0.0 to accept network requests from Windows host
-    app.bindaddr("0.0.0.0").port(3000).multithreaded().run();
+    unsigned int threads = std::thread::hardware_concurrency();
+    if (threads == 0) threads = 4;
+
+    std::cout << "Server running on http://0.0.0.0:" << config.port
+              << " (" << threads << " threads)" << std::endl;
+
+    app.bindaddr("0.0.0.0").port(config.port).concurrency(threads).run();
 
     std::cout << "Server stopped." << std::endl;
     return 0;
