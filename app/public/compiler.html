@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Code Editor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/dracula.min.css">
+  <link rel="stylesheet" href="/public/compiler.css">
+</head>
+<body>
+
+
+
+  <script>
+if(localStorage.getItem("loggedIn") !== "true")
+{
+    location.href = "/public/login.html";
+}
+</script>
+
+  
+  <div class="container">
+    <header>
+      <h1>Online Code Editor</h1>
+      <p class="subtitle">Write, compile & run code in the browser</p>
+    </header>
+
+    <div class="toolbar">
+      <select id="language">
+        <option value="cpp">C++</option>
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+      </select>
+      <div class="toolbar-actions">
+        <button id="runBtn" onclick="runCode()">&#9654; Run</button>
+        <button id="clearBtn" onclick="clearCode()">Clear</button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+
+    <div class="editor-wrapper">
+      <div class="panel panel-editor">
+        <div class="panel-header">Code</div>
+        <textarea id="editor"></textarea>
+      </div>
+      <div class="panel panel-output">
+        <div class="panel-header">Output</div>
+        <pre id="stdout"></pre>
+        <div class="panel-header panel-header-error">Errors</div>
+        <pre id="stderr"></pre>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <div class="panel-header">Stdin Input</div>
+      <textarea id="userInput" placeholder="Enter program input here (optional)..."></textarea>
+    </div>
+
+    <div class="history-section">
+      <div class="panel-header">
+        Recent Submissions
+        <button id="refreshHistory" onclick="loadHistory()">Refresh</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+
+    <div class="shortcut-hint">Ctrl+Enter to run</div>
+  </div>
+
+<div style="text-align:right;margin-bottom:10px;">
+  <button onclick="logout()" id="logoutBtn">
+      Logout
+  </button>
+</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+  <script src="/public/script.js"></script>
+</body>
+</html>
