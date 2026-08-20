@@ -13,6 +13,14 @@ struct Question {
     std::string difficulty;
 };
 
+struct TestCase {
+    int id = 0;
+    int questionId = 0;
+    std::string input;
+    std::string expectedOutput;
+    bool isHidden = false;
+};
+
 struct Submission {
     int id = 0;
     std::string language;
@@ -47,6 +55,12 @@ public:
     std::vector<Question> getQuestions();
     bool updateQuestion(const Question& question);
     bool deleteQuestion(int id);
+
+    // Test case management
+    int addTestCase(const TestCase& testCase);
+    std::vector<TestCase> getTestCases(int questionId);
+    bool updateTestCase(const TestCase& testCase);
+    bool deleteTestCase(int id);
 
 private:
     void init();

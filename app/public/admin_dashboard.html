@@ -93,7 +93,8 @@ if (
             <h2>Test Cases</h2>
 
             <input id="testInput" placeholder="Input">
-            <input id="expectedOutput" placeholder="Output">
+            <input id="expectedOutput" placeholder="Expected Output">
+            <label><input type="checkbox" id="testHidden"> Hidden Test Case</label>
 
             <button class="success" onclick="addTestCase()">
                 Add Test Case
@@ -104,6 +105,7 @@ if (
                     <tr>
                         <th>ID</th>
                         <th>Input</th>
+                        <th>Expected Output</th>
                         <th>Visibility</th>
                         <th>Actions</th>
                     </tr>

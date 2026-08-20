@@ -1,7 +1,6 @@
 // ===============================
 // ADMIN DASHBOARD
-// Questions are persisted in the C++ backend via /api/questions.
-// Test cases have no backend endpoint yet, so they stay in localStorage.
+// Questions and test cases are persisted in the C++ backend via /api/questions.
 // ===============================
 
 // Backend base URL. Empty string = same origin (when pages are served by
@@ -11,8 +10,9 @@ const API_BASE = "";
 
 // STATE
 let questions = [];
-let testcases = JSON.parse(localStorage.getItem("testcases")) || [];
+let testcases = [];
 let editId = null; // null = add mode, otherwise the id being edited
+let selectedQuestionId = null; // ID of question currently viewing test cases for
 
 // ===============================
 // INIT
@@ -123,11 +123,22 @@ function renderQuestions() {
         editBtn.textContent = "Edit";
         editBtn.addEventListener("click", () => editQuestion(q.id));
 
+        const viewTestCasesBtn = document.createElement("button");
+        viewTestCasesBtn.textContent = "Test Cases";
+        viewTestCasesBtn.addEventListener("click", () => {
+            loadTestCases(q.id);
+            document.querySelectorAll(".sidebar li").forEach(l => l.classList.remove("active"));
+            document.querySelector('[data-page="testcases"]').classList.add("active");
+            document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+            document.getElementById("testcases").style.display = "block";
+        });
+
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Delete";
         deleteBtn.addEventListener("click", () => deleteQuestion(q.id));
 
         actions.appendChild(editBtn);
+        actions.appendChild(viewTestCasesBtn);
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
 
@@ -169,31 +180,62 @@ function clearQuestionForm() {
 }
 
 // ===============================
-// TEST CASES (localStorage only — no backend endpoint yet)
+// TEST CASES (backend-backed via /api/questions/:id/testcases)
 // ===============================
-function saveTestCases() {
-    localStorage.setItem("testcases", JSON.stringify(testcases));
+async function loadTestCases(questionId) {
+    if (!questionId) {
+        testcases = [];
+        renderTestCases();
+        updateCounts();
+        return;
+    }
+    selectedQuestionId = questionId;
+    try {
+        const res = await fetch(`${API_BASE}/api/questions/${questionId}/testcases`);
+        const data = await res.json();
+        testcases = data.testcases || [];
+    } catch (e) {
+        testcases = [];
+        alert("Failed to load test cases from server.");
+    }
+    renderTestCases();
+    updateCounts();
 }
 
-function addTestCase() {
+async function addTestCase() {
+    if (!selectedQuestionId) {
+        alert("Please select a question first");
+        return;
+    }
     const input = document.getElementById("testInput").value;
     const output = document.getElementById("expectedOutput").value;
+    const isHidden = document.getElementById("testHidden").checked;
 
     if (!input || !output) {
-        alert("Fill fields");
+        alert("Fill input and expected output fields");
         return;
     }
 
-    testcases.push({
-        id: Date.now(),
-        input,
-        output,
-        visibility: "public"
-    });
+    try {
+        const res = await fetch(`${API_BASE}/api/questions/${selectedQuestionId}/testcases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ input, expected_output: output, is_hidden: isHidden }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            alert(data.error || "Failed to add test case");
+            return;
+        }
+    } catch (e) {
+        alert("Server error while adding test case.");
+        return;
+    }
 
-    saveTestCases();
-    renderTestCases();
-    updateCounts();
+    document.getElementById("testInput").value = "";
+    document.getElementById("expectedOutput").value = "";
+    document.getElementById("testHidden").checked = false;
+    await loadTestCases(selectedQuestionId);
 }
 
 function renderTestCases() {
@@ -204,7 +246,8 @@ function renderTestCases() {
         const row = document.createElement("tr");
         row.appendChild(textCell(t.id));
         row.appendChild(textCell(t.input));
-        row.appendChild(textCell(t.visibility));
+        row.appendChild(textCell(t.expected_output));
+        row.appendChild(textCell(t.is_hidden ? "Hidden" : "Public"));
 
         const actions = document.createElement("td");
         const deleteBtn = document.createElement("button");
@@ -217,11 +260,20 @@ function renderTestCases() {
     });
 }
 
-function deleteTestCase(id) {
-    testcases = testcases.filter((t) => t.id !== id);
-    saveTestCases();
-    renderTestCases();
-    updateCounts();
+async function deleteTestCase(id) {
+    if (!confirm("Delete this test case?")) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/testcases/${id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!data.success) {
+            alert("Failed to delete test case");
+            return;
+        }
+    } catch (e) {
+        alert("Server error while deleting test case.");
+        return;
+    }
+    await loadTestCases(selectedQuestionId);
 }
 
 // ===============================

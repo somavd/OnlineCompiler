@@ -259,6 +259,69 @@ int main() {
         return jsonResponse(200, body);
     });
 
+    // GET /api/questions/<int>/testcases — get all test cases for a question
+    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("GET"_method)
+    ([&db](int id) {
+        auto testCases = db.getTestCases(id);
+
+        crow::json::wvalue body;
+        std::vector<crow::json::wvalue> items;
+        for (const auto& tc : testCases) {
+            crow::json::wvalue item;
+            item["id"] = tc.id;
+            item["question_id"] = tc.questionId;
+            item["input"] = tc.input;
+            item["expected_output"] = tc.expectedOutput;
+            item["is_hidden"] = tc.isHidden;
+            items.push_back(std::move(item));
+        }
+        body["testcases"] = std::move(items);
+        return jsonResponse(200, body);
+    });
+
+    // POST /api/questions/<int>/testcases — add a test case to a question
+    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("POST"_method)
+    ([&db](const crow::request& req, int questionId) {
+        auto jsonBody = crow::json::load(req.body);
+        if (!jsonBody) {
+            return jsonError(400, "Invalid JSON body");
+        }
+
+        if (!jsonBody.has("input") || std::string(jsonBody["input"].s()).empty()) {
+            return jsonError(400, "Input is required");
+        }
+        if (!jsonBody.has("expected_output") || std::string(jsonBody["expected_output"].s()).empty()) {
+            return jsonError(400, "Expected output is required");
+        }
+
+        TestCase testCase;
+        testCase.questionId = questionId;
+        testCase.input = jsonBody["input"].s();
+        testCase.expectedOutput = jsonBody["expected_output"].s();
+        testCase.isHidden = jsonBody.has("is_hidden") ? jsonBody["is_hidden"].b() : false;
+
+        int rowId = db.addTestCase(testCase);
+        if (rowId < 0) {
+            return jsonError(500, "Failed to add test case");
+        }
+
+        crow::json::wvalue body;
+        body["success"] = true;
+        body["id"] = rowId;
+        return jsonResponse(200, body);
+    });
+
+    // DELETE /api/testcases/<int> — delete a test case
+    CROW_ROUTE(app, "/api/testcases/<int>").methods("DELETE"_method)
+    ([&db](int id) {
+        bool deleted = db.deleteTestCase(id);
+
+        crow::json::wvalue body;
+        body["success"] = deleted;
+        body["id"] = id;
+        return jsonResponse(200, body);
+    });
+
     // GET /api/submissions — retrieve submission history
     CROW_ROUTE(app, "/api/submissions").methods("GET"_method)
     ([&db](const crow::request& req) {
