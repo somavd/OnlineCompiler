@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Questions | Online Compiler</title>
+
+<link rel="stylesheet" href="/public/admin.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h2>Compiler Admin</h2>
+
+        <ul>
+            <li><a href="/public/admin-dashboard.html">Dashboard</a></li>
+            <li class="active"><a href="/public/admin-questions.html">Questions</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+        <h2>Questions</h2>
+
+        <div id="status" class="status"></div>
+
+        <input id="title" placeholder="Question Title">
+        <textarea id="description" placeholder="Description" rows="3"></textarea>
+        <input id="category" placeholder="Category">
+
+        <select id="difficulty">
+            <option>Easy</option>
+            <option>Medium</option>
+            <option>Hard</option>
+        </select>
+
+        <button class="primary" onclick="saveQuestion()">
+            Save Question
+        </button>
+        <button onclick="clearQuestionForm()">Clear</button>
+
+        <div id="editTestCases" style="display: none; margin-top: 20px;">
+            <h3>Test Cases</h3>
+            <input id="editTestInput" placeholder="Input">
+            <input id="editExpectedOutput" placeholder="Expected Output">
+            <label><input type="checkbox" id="editTestHidden"> Hidden</label>
+            <button class="success" onclick="addEditTestCase()">Add Test Case</button>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Input</th>
+                        <th>Expected Output</th>
+                        <th>Visibility</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="editTestcaseTable"></tbody>
+            </table>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Difficulty</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="questionTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="/public/shared.js"></script>
+<script src="/public/admin-questions.js"></script>
+
+</body>
+</html>

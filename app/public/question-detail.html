@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Question Details | Online Compiler</title>
+
+<link rel="stylesheet" href="/public/admin.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+    <div class="content">
+        <button onclick="location.href='/public/admin-dashboard.html'" class="primary">← Back to Dashboard</button>
+
+        <div id="status" class="status"></div>
+
+        <h1 id="questionTitle">Question Title</h1>
+        <p id="questionDescription">Description</p>
+        <p><strong>Category:</strong> <span id="questionCategory"></span></p>
+        <p><strong>Difficulty:</strong> <span id="questionDifficulty"></span></p>
+
+        <h2>Test Cases</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Input</th>
+                    <th>Expected Output</th>
+                    <th>Visibility</th>
+                </tr>
+            </thead>
+            <tbody id="testcaseTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="/public/shared.js"></script>
+<script src="/public/question-detail.js"></script>
+
+</body>
+</html>
