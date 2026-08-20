@@ -6,17 +6,21 @@ bool RateLimiter::allow(const std::string& clientIp) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto now = std::chrono::steady_clock::now();
 
-    // Purge periodically OR when at capacity
-    if (++callsSincePurge_ >= PURGE_INTERVAL || buckets_.size() >= maxEntries_) {
+    // Periodically purge stale entries
+    if (++callsSincePurge_ >= PURGE_INTERVAL) {
         purgeStale(now);
         callsSincePurge_ = 0;
     }
 
     auto it = buckets_.find(clientIp);
     if (it == buckets_.end()) {
-        // Reject new IPs if still at capacity after purge
+        // Enforce memory cap: reject new IPs if at capacity
         if (buckets_.size() >= maxEntries_) {
-            return false;
+            purgeStale(now);
+            callsSincePurge_ = 0;
+            if (buckets_.size() >= maxEntries_) {
+                return false;
+            }
         }
         buckets_[clientIp] = {1, now};
         return true;

@@ -8,13 +8,13 @@
 class RateLimiter {
 public:
     RateLimiter(int windowSeconds, int maxRequests, size_t maxEntries = 10000)
-        : windowSeconds_(windowSeconds), maxRequests_(maxRequests),
-          maxEntries_(maxEntries) {}
+        : windowSeconds_(windowSeconds), maxRequests_(maxRequests), maxEntries_(maxEntries) {}
 
     // Returns true if request is allowed
     bool allow(const std::string& clientIp);
 
 private:
+    // Remove entries older than 2x window to prevent unbounded memory growth
     void purgeStale(std::chrono::steady_clock::time_point now);
 
     struct Bucket {

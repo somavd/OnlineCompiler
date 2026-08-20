@@ -15,21 +15,21 @@ inline const std::unordered_map<std::string, LangConfig>& getLanguages() {
     static const std::unordered_map<std::string, LangConfig> langs = {
         {"cpp", {
             "C++",
-            "gcc:14-bookworm",
+            "gcc:14",
             "program.cpp",
-            "g++ -O2 -std=c++17 program.cpp -o program",
+            "g++ -o program program.cpp",
             "./program"
         }},
         {"python", {
             "Python",
-            "python:3.12-slim",
+            "python:3-alpine",
             "program.py",
             "",
-            "python3 program.py"
+            "python program.py"
         }},
         {"javascript", {
             "JavaScript",
-            "node:20-slim",
+            "node:20-alpine",
             "program.js",
             "",
             "node program.js"
@@ -37,3 +37,4 @@ inline const std::unordered_map<std::string, LangConfig>& getLanguages() {
     };
     return langs;
 }
+
