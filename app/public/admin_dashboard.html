@@ -31,7 +31,6 @@ if (
         <ul>
             <li class="active" data-page="dashboard">Dashboard</li>
             <li data-page="questions">Questions</li>
-            <li data-page="testcases">Test Cases</li>
             <li data-page="users">Users</li>
             <li onclick="logout()">Logout</li>
         </ul>
@@ -62,6 +61,7 @@ if (
             <h2>Questions</h2>
 
             <input id="title" placeholder="Question Title">
+            <textarea id="description" placeholder="Description" rows="3"></textarea>
             <input id="category" placeholder="Category">
 
             <select id="difficulty">
@@ -88,32 +88,6 @@ if (
             </table>
         </section>
 
-        <!-- TEST CASES -->
-        <section id="testcases" class="page">
-            <h2>Test Cases</h2>
-
-            <input id="testInput" placeholder="Input">
-            <input id="expectedOutput" placeholder="Expected Output">
-            <label><input type="checkbox" id="testHidden"> Hidden Test Case</label>
-
-            <button class="success" onclick="addTestCase()">
-                Add Test Case
-            </button>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Input</th>
-                        <th>Expected Output</th>
-                        <th>Visibility</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="testcaseTable"></tbody>
-            </table>
-        </section>
-
         <!-- USERS -->
         <section id="users" class="page">
             <h2>Users</h2>
@@ -122,6 +96,89 @@ if (
 
     </div>
 </div>
+
+<!-- QUESTION DETAIL MODAL -->
+<div id="questionModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeQuestionModal()">&times;</span>
+        <h2 id="modalTitle">Question Details</h2>
+        <p id="modalDescription"></p>
+        <p><strong>Category:</strong> <span id="modalCategory"></span></p>
+        <p><strong>Difficulty:</strong> <span id="modalDifficulty"></span></p>
+
+        <h3>Test Cases</h3>
+        <div class="testcase-form">
+            <input id="modalTestInput" placeholder="Input">
+            <input id="modalExpectedOutput" placeholder="Expected Output">
+            <label><input type="checkbox" id="modalTestHidden"> Hidden</label>
+            <button class="success" onclick="addModalTestCase()">Add Test Case</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Input</th>
+                    <th>Expected Output</th>
+                    <th>Visibility</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="modalTestcaseTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.testcase-form {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+.testcase-form input {
+    flex: 1;
+}
+
+.testcase-form label {
+    white-space: nowrap;
+}
+</style>
 
 <script src="/public/admin.js"></script>
 

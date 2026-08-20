@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS submissions (
 CREATE TABLE IF NOT EXISTS questions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     title       TEXT    NOT NULL,
+    description TEXT    DEFAULT '',
     category    TEXT    NOT NULL,
     difficulty  TEXT    NOT NULL
 );
@@ -171,8 +172,8 @@ bool Database::addQuestion(const Question& question) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     const char* sql = R"(
-        INSERT INTO questions (title, category, difficulty)
-        VALUES (?, ?, ?)
+        INSERT INTO questions (title, description, category, difficulty)
+        VALUES (?, ?, ?, ?)
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -183,8 +184,9 @@ bool Database::addQuestion(const Question& question) {
     }
 
     sqlite3_bind_text(stmt, 1, question.title.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, question.category.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, question.description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, question.category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
 
     rc = sqlite3_step(stmt);
     bool success = (rc == SQLITE_DONE);
@@ -201,7 +203,7 @@ std::vector<Question> Database::getQuestions() {
     std::vector<Question> results;
 
     const char* sql = R"(
-        SELECT id, title, category, difficulty
+        SELECT id, title, description, category, difficulty
         FROM questions
         ORDER BY id ASC
     )";
@@ -222,8 +224,9 @@ std::vector<Question> Database::getQuestions() {
         Question q;
         q.id = sqlite3_column_int(stmt, 0);
         q.title = getText(stmt, 1);
-        q.category = getText(stmt, 2);
-        q.difficulty = getText(stmt, 3);
+        q.description = getText(stmt, 2);
+        q.category = getText(stmt, 3);
+        q.difficulty = getText(stmt, 4);
         results.push_back(std::move(q));
     }
 
@@ -236,7 +239,7 @@ bool Database::updateQuestion(const Question& question) {
 
     const char* sql = R"(
         UPDATE questions
-        SET title = ?, category = ?, difficulty = ?
+        SET title = ?, description = ?, category = ?, difficulty = ?
         WHERE id = ?
     )";
 
@@ -248,9 +251,10 @@ bool Database::updateQuestion(const Question& question) {
     }
 
     sqlite3_bind_text(stmt, 1, question.title.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, question.category.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 4, question.id);
+    sqlite3_bind_text(stmt, 2, question.description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, question.category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, question.id);
 
     rc = sqlite3_step(stmt);
     bool success = (rc == SQLITE_DONE) && (sqlite3_changes(db_) > 0);

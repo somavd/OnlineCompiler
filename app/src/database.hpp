@@ -9,6 +9,7 @@ struct sqlite3;
 struct Question {
     int id = 0;
     std::string title;
+    std::string description;
     std::string category;
     std::string difficulty;
 };

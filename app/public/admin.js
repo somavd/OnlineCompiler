@@ -66,6 +66,7 @@ async function loadQuestions() {
 
 async function saveQuestion() {
     const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
     const category = document.getElementById("category").value.trim();
     const difficulty = document.getElementById("difficulty").value;
 
@@ -74,7 +75,7 @@ async function saveQuestion() {
         return;
     }
 
-    const payload = { title, category, difficulty };
+    const payload = { title, description, category, difficulty };
 
     try {
         let res;
@@ -123,22 +124,16 @@ function renderQuestions() {
         editBtn.textContent = "Edit";
         editBtn.addEventListener("click", () => editQuestion(q.id));
 
-        const viewTestCasesBtn = document.createElement("button");
-        viewTestCasesBtn.textContent = "Test Cases";
-        viewTestCasesBtn.addEventListener("click", () => {
-            loadTestCases(q.id);
-            document.querySelectorAll(".sidebar li").forEach(l => l.classList.remove("active"));
-            document.querySelector('[data-page="testcases"]').classList.add("active");
-            document.querySelectorAll(".page").forEach(p => p.style.display = "none");
-            document.getElementById("testcases").style.display = "block";
-        });
+        const viewBtn = document.createElement("button");
+        viewBtn.textContent = "View";
+        viewBtn.addEventListener("click", () => openQuestionModal(q.id));
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Delete";
         deleteBtn.addEventListener("click", () => deleteQuestion(q.id));
 
         actions.appendChild(editBtn);
-        actions.appendChild(viewTestCasesBtn);
+        actions.appendChild(viewBtn);
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
 
@@ -150,6 +145,7 @@ function editQuestion(id) {
     const q = questions.find((item) => item.id === id);
     if (!q) return;
     document.getElementById("title").value = q.title;
+    document.getElementById("description").value = q.description || "";
     document.getElementById("category").value = q.category;
     document.getElementById("difficulty").value = q.difficulty;
     editId = id;
@@ -174,22 +170,42 @@ async function deleteQuestion(id) {
 
 function clearQuestionForm() {
     document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
     document.getElementById("category").value = "";
     document.getElementById("difficulty").selectedIndex = 0;
     editId = null;
 }
 
 // ===============================
-// TEST CASES (backend-backed via /api/questions/:id/testcases)
+// QUESTION MODAL
 // ===============================
-async function loadTestCases(questionId) {
+let modalQuestionId = null;
+
+async function openQuestionModal(id) {
+    const q = questions.find((item) => item.id === id);
+    if (!q) return;
+
+    modalQuestionId = id;
+    document.getElementById("modalTitle").textContent = q.title;
+    document.getElementById("modalDescription").textContent = q.description || "No description";
+    document.getElementById("modalCategory").textContent = q.category;
+    document.getElementById("modalDifficulty").textContent = q.difficulty;
+
+    await loadModalTestCases(id);
+    document.getElementById("questionModal").style.display = "block";
+}
+
+function closeQuestionModal() {
+    document.getElementById("questionModal").style.display = "none";
+    modalQuestionId = null;
+}
+
+async function loadModalTestCases(questionId) {
     if (!questionId) {
         testcases = [];
-        renderTestCases();
-        updateCounts();
+        renderModalTestCases();
         return;
     }
-    selectedQuestionId = questionId;
     try {
         const res = await fetch(`${API_BASE}/api/questions/${questionId}/testcases`);
         const data = await res.json();
@@ -198,18 +214,17 @@ async function loadTestCases(questionId) {
         testcases = [];
         alert("Failed to load test cases from server.");
     }
-    renderTestCases();
-    updateCounts();
+    renderModalTestCases();
 }
 
-async function addTestCase() {
-    if (!selectedQuestionId) {
-        alert("Please select a question first");
+async function addModalTestCase() {
+    if (!modalQuestionId) {
+        alert("No question selected");
         return;
     }
-    const input = document.getElementById("testInput").value;
-    const output = document.getElementById("expectedOutput").value;
-    const isHidden = document.getElementById("testHidden").checked;
+    const input = document.getElementById("modalTestInput").value;
+    const output = document.getElementById("modalExpectedOutput").value;
+    const isHidden = document.getElementById("modalTestHidden").checked;
 
     if (!input || !output) {
         alert("Fill input and expected output fields");
@@ -217,7 +232,7 @@ async function addTestCase() {
     }
 
     try {
-        const res = await fetch(`${API_BASE}/api/questions/${selectedQuestionId}/testcases`, {
+        const res = await fetch(`${API_BASE}/api/questions/${modalQuestionId}/testcases`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ input, expected_output: output, is_hidden: isHidden }),
@@ -232,14 +247,14 @@ async function addTestCase() {
         return;
     }
 
-    document.getElementById("testInput").value = "";
-    document.getElementById("expectedOutput").value = "";
-    document.getElementById("testHidden").checked = false;
-    await loadTestCases(selectedQuestionId);
+    document.getElementById("modalTestInput").value = "";
+    document.getElementById("modalExpectedOutput").value = "";
+    document.getElementById("modalTestHidden").checked = false;
+    await loadModalTestCases(modalQuestionId);
 }
 
-function renderTestCases() {
-    const table = document.getElementById("testcaseTable");
+function renderModalTestCases() {
+    const table = document.getElementById("modalTestcaseTable");
     table.innerHTML = "";
 
     testcases.forEach((t) => {
@@ -252,7 +267,7 @@ function renderTestCases() {
         const actions = document.createElement("td");
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Delete";
-        deleteBtn.addEventListener("click", () => deleteTestCase(t.id));
+        deleteBtn.addEventListener("click", () => deleteModalTestCase(t.id));
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
 
@@ -260,7 +275,7 @@ function renderTestCases() {
     });
 }
 
-async function deleteTestCase(id) {
+async function deleteModalTestCase(id) {
     if (!confirm("Delete this test case?")) return;
     try {
         const res = await fetch(`${API_BASE}/api/testcases/${id}`, { method: "DELETE" });
@@ -273,7 +288,7 @@ async function deleteTestCase(id) {
         alert("Server error while deleting test case.");
         return;
     }
-    await loadTestCases(selectedQuestionId);
+    await loadModalTestCases(modalQuestionId);
 }
 
 // ===============================

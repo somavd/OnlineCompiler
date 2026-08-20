@@ -184,6 +184,7 @@ int main() {
             crow::json::wvalue item;
             item["id"] = q.id;
             item["title"] = q.title;
+            item["description"] = q.description;
             item["category"] = q.category;
             item["difficulty"] = q.difficulty;
             items.push_back(std::move(item));
@@ -205,11 +206,13 @@ int main() {
         }
 
         std::string title = jsonBody["title"].s();
+        std::string description = jsonBody.has("description") ? std::string(jsonBody["description"].s()) : "";
         std::string category = jsonBody.has("category") ? std::string(jsonBody["category"].s()) : "";
         std::string difficulty = jsonBody.has("difficulty") ? std::string(jsonBody["difficulty"].s()) : "";
 
         Question question;
         question.title = title;
+        question.description = description;
         question.category = category;
         question.difficulty = difficulty;
 
@@ -236,6 +239,7 @@ int main() {
         Question question;
         question.id = id;
         question.title = jsonBody["title"].s();
+        question.description = jsonBody.has("description") ? std::string(jsonBody["description"].s()) : "";
         question.category = jsonBody.has("category") ? std::string(jsonBody["category"].s()) : "";
         question.difficulty = jsonBody.has("difficulty") ? std::string(jsonBody["difficulty"].s()) : "";
 
@@ -313,7 +317,7 @@ int main() {
 
     // DELETE /api/testcases/<int> — delete a test case
     CROW_ROUTE(app, "/api/testcases/<int>").methods("DELETE"_method)
-    ([&db](int id) {
+    ([&db](int id) { 
         bool deleted = db.deleteTestCase(id);
 
         crow::json::wvalue body;
