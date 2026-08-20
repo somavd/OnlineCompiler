@@ -12,6 +12,7 @@ struct Question {
     std::string description;
     std::string category;
     std::string difficulty;
+    std::string createdAt;
 };
 
 struct TestCase {
@@ -46,22 +47,21 @@ public:
     int saveSubmission(const Submission& sub);
 
     // Retrieve recent submissions
-    std::vector<Submission> getSubmissions(
-        int limit = 20,
-        const std::string& language = ""
-    );
+    std::vector<Submission> getSubmissions(int limit = 20, const std::string& language = "");
 
     // Question management
-    bool addQuestion(const Question& question);
-    std::vector<Question> getQuestions();
-    bool updateQuestion(const Question& question);
+    int addQuestion(const std::string& title, const std::string& description,
+                    const std::string& category, const std::string& difficulty);
+    bool updateQuestion(int id, const std::string& title, const std::string& description,
+                        const std::string& category, const std::string& difficulty);
     bool deleteQuestion(int id);
+    std::vector<Question> getQuestions();
 
     // Test case management
-    int addTestCase(const TestCase& testCase);
-    std::vector<TestCase> getTestCases(int questionId);
-    bool updateTestCase(const TestCase& testCase);
+    int addTestCase(int questionId, const std::string& input,
+                    const std::string& expectedOutput, bool isHidden);
     bool deleteTestCase(int id);
+    std::vector<TestCase> getTestCases(int questionId);
 
 private:
     void init();

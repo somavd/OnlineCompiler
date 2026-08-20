@@ -1,10 +1,4 @@
 const API_BASE = "";
-// CodeMirror mode map
-const MODES = {
-  cpp: "text/x-c++src",
-  python: "python",
-  javascript: "javascript",
-};
 
 // Default code templates per language
 const TEMPLATES = {
@@ -13,40 +7,27 @@ const TEMPLATES = {
   javascript: 'console.log("Hello, World!");\n',
 };
 
-// Initialize CodeMirror
-const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-  mode: MODES.cpp,
-  theme: "dracula",
-  lineNumbers: true,
-  indentUnit: 4,
-  tabSize: 4,
-  indentWithTabs: false,
-  lineWrapping: false,
-  matchBrackets: true,
-  autoCloseBrackets: true,
-  extraKeys: {
-    "Ctrl-Enter": function () { runCode(); },
-    "Cmd-Enter": function () { runCode(); },
-    Tab: function (cm) {
-      cm.replaceSelection("    ", "end");
-    },
-  },
+const editorEl = document.getElementById("editor");
+editorEl.value = TEMPLATES.cpp;
+
+// Ctrl+Enter / Cmd+Enter to run
+editorEl.addEventListener("keydown", function (e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    runCode();
+  }
 });
 
-editor.setValue(TEMPLATES.cpp);
-
-// Switch language mode
+// Switch language template
 document.getElementById("language").addEventListener("change", function () {
   const lang = this.value;
-  editor.setOption("mode", MODES[lang]);
-  editor.setValue(TEMPLATES[lang] || "");
-  editor.focus();
+  editorEl.value = TEMPLATES[lang] || "";
 });
 
 // Run code
 async function runCode() {
   const language = document.getElementById("language").value;
-  const code = editor.getValue();
+  const code = editorEl.value;
   const input = document.getElementById("userInput").value;
   const stdoutEl = document.getElementById("stdout");
   const stderrEl = document.getElementById("stderr");
@@ -115,12 +96,12 @@ async function runCode() {
 // Clear
 function clearCode() {
   const lang = document.getElementById("language").value;
-  editor.setValue(TEMPLATES[lang] || "");
+  editorEl.value = TEMPLATES[lang] || "";
   document.getElementById("userInput").value = "";
   document.getElementById("stdout").textContent = "";
   document.getElementById("stderr").textContent = "";
   document.getElementById("status").textContent = "";
-  editor.focus();
+  editorEl.focus();
 }
 
 // Cached submissions for click-to-load
@@ -181,8 +162,7 @@ function loadSubmission(idx) {
   const s = historyCache[idx];
   if (!s) return;
   document.getElementById("language").value = s.language;
-  editor.setOption("mode", MODES[s.language]);
-  editor.setValue(s.code);
+  editorEl.value = s.code;
   document.getElementById("userInput").value = s.input || "";
   document.getElementById("stdout").textContent = s.stdout || "";
   document.getElementById("stderr").textContent = s.stderr || "";

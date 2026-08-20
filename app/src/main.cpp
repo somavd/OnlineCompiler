@@ -11,20 +11,22 @@
 #include <iostream>
 #include <thread>
 #include <csignal>
-#include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
 
-static const size_t MAX_BODY_BYTES = 1024 * 1024;  // 1MB
+static fs::path getPublicDir() {
+    const char* env = std::getenv("PUBLIC_DIR");
+    if (env) return fs::weakly_canonical(env);
+    return fs::weakly_canonical("public");
+}
 
 // JSON response helper — sets Content-Type and CORS properly
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
     crow::response res(code, body.dump());
     res.set_header("Content-Type", "application/json");
     res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.set_header("Access-Control-Allow-Headers", "Content-Type");
     return res;
 }
 
@@ -59,11 +61,8 @@ static std::string getMimeType(const std::string& ext) {
 
 // Global app pointer for graceful shutdown
 static crow::SimpleApp* g_app = nullptr;
-static volatile sig_atomic_t g_shutdownRequested = 0;
 
-static void signalHandler(int sig) {
-    // Only async-signal-safe calls here
-    g_shutdownRequested = 1;
+static void signalHandler(int /*sig*/) {
     const char msg[] = "\nShutdown requested...\n";
     (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
     if (g_app) g_app->stop();
@@ -88,19 +87,11 @@ int main() {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    // Global OPTIONS preflight handler for all /api/* endpoints
-    CROW_ROUTE(app, "/api/<path>").methods("OPTIONS"_method)
-    ([](const std::string& /*path*/) {
-        crow::response res(200);
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
-        return res;
-    });
+    const fs::path publicDir = getPublicDir();
 
-    // Serve frontend — index.html at root
-    CROW_ROUTE(app, "/")([]() {
-        auto [found, content] = readFileContents("public/index.html");
+    // Serve frontend — compiler.html at root
+    CROW_ROUTE(app, "/")([&publicDir]() {
+        auto [found, content] = readFileContents((publicDir / "compiler.html").string());
         if (!found) {
             return crow::response(404, "Frontend not found");
         }
@@ -110,24 +101,23 @@ int main() {
     });
 
     // Serve static files: /public/<path>
-    CROW_ROUTE(app, "/public/<path>")([](const std::string& filePath) {
-        std::string fullPath = "public/" + filePath;
+    CROW_ROUTE(app, "/public/<path>")([&publicDir](const std::string& filePath) {
+        fs::path fullPath = publicDir / filePath;
 
         // Prevent path traversal via canonical path check
         auto canonical = fs::weakly_canonical(fullPath);
-        auto publicRoot = fs::weakly_canonical("public");
+        auto publicRoot = fs::weakly_canonical(publicDir);
         if (canonical.string().rfind(publicRoot.string(), 0) != 0) {
             return crow::response(403, "Forbidden");
         }
 
-        auto [found, content] = readFileContents(fullPath);
+        auto [found, content] = readFileContents(fullPath.string());
         if (!found) {
             return crow::response(404, "Not found");
         }
         std::string ext = fs::path(fullPath).extension().string();
         auto res = crow::response(200, content);
         res.set_header("Content-Type", getMimeType(ext));
-        res.set_header("Cache-Control", "public, max-age=3600");
         return res;
     });
 
@@ -141,7 +131,7 @@ int main() {
         }
 
         // Request body size check (1MB)
-        if (req.body.size() > MAX_BODY_BYTES) {
+        if (req.body.size() > 1024 * 1024) {
             return jsonError(413, "Request body too large");
         }
 
@@ -170,159 +160,6 @@ int main() {
         body["stderr"] = result.stderrStr;
         body["exitCode"] = result.exitCode;
         body["timedOut"] = result.timedOut;
-        return jsonResponse(200, body);
-    });
-
-    // GET /api/questions — retrieve all questions
-    CROW_ROUTE(app, "/api/questions").methods("GET"_method)
-    ([&db](const crow::request& /*req*/) {
-        auto questions = db.getQuestions();
-
-        crow::json::wvalue body;
-        std::vector<crow::json::wvalue> items;
-        for (const auto& q : questions) {
-            crow::json::wvalue item;
-            item["id"] = q.id;
-            item["title"] = q.title;
-            item["description"] = q.description;
-            item["category"] = q.category;
-            item["difficulty"] = q.difficulty;
-            items.push_back(std::move(item));
-        }
-        body["questions"] = std::move(items);
-        return jsonResponse(200, body);
-    });
-
-    // POST /api/questions — add a new question
-    CROW_ROUTE(app, "/api/questions").methods("POST"_method)
-    ([&db](const crow::request& req) {
-        auto jsonBody = crow::json::load(req.body);
-        if (!jsonBody) {
-            return jsonError(400, "Invalid JSON body");
-        }
-
-        if (!jsonBody.has("title") || std::string(jsonBody["title"].s()).empty()) {
-            return jsonError(400, "Title is required");
-        }
-
-        std::string title = jsonBody["title"].s();
-        std::string description = jsonBody.has("description") ? std::string(jsonBody["description"].s()) : "";
-        std::string category = jsonBody.has("category") ? std::string(jsonBody["category"].s()) : "";
-        std::string difficulty = jsonBody.has("difficulty") ? std::string(jsonBody["difficulty"].s()) : "";
-
-        Question question;
-        question.title = title;
-        question.description = description;
-        question.category = category;
-        question.difficulty = difficulty;
-
-        if (!db.addQuestion(question)) {
-            return jsonError(500, "Failed to add question");
-        }
-
-        crow::json::wvalue body;
-        body["success"] = true;
-        return jsonResponse(200, body);
-    });
-
-    // PUT /api/questions/<int> — update an existing question
-    CROW_ROUTE(app, "/api/questions/<int>").methods("PUT"_method)
-    ([&db](const crow::request& req, int id) {
-        auto jsonBody = crow::json::load(req.body);
-        if (!jsonBody) {
-            return jsonError(400, "Invalid JSON body");
-        }
-        if (!jsonBody.has("title") || std::string(jsonBody["title"].s()).empty()) {
-            return jsonError(400, "Title is required");
-        }
-
-        Question question;
-        question.id = id;
-        question.title = jsonBody["title"].s();
-        question.description = jsonBody.has("description") ? std::string(jsonBody["description"].s()) : "";
-        question.category = jsonBody.has("category") ? std::string(jsonBody["category"].s()) : "";
-        question.difficulty = jsonBody.has("difficulty") ? std::string(jsonBody["difficulty"].s()) : "";
-
-        if (!db.updateQuestion(question)) {
-            return jsonError(404, "Question not found or not updated");
-        }
-
-        crow::json::wvalue body;
-        body["success"] = true;
-        return jsonResponse(200, body);
-    });
-
-    // DELETE /api/questions/<int> — delete a question
-    CROW_ROUTE(app, "/api/questions/<int>").methods("DELETE"_method)
-    ([&db](int id) {
-        bool deleted = db.deleteQuestion(id);
-
-        crow::json::wvalue body;
-        body["success"] = deleted;
-        body["id"] = id;
-        return jsonResponse(200, body);
-    });
-
-    // GET /api/questions/<int>/testcases — get all test cases for a question
-    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("GET"_method)
-    ([&db](int id) {
-        auto testCases = db.getTestCases(id);
-
-        crow::json::wvalue body;
-        std::vector<crow::json::wvalue> items;
-        for (const auto& tc : testCases) {
-            crow::json::wvalue item;
-            item["id"] = tc.id;
-            item["question_id"] = tc.questionId;
-            item["input"] = tc.input;
-            item["expected_output"] = tc.expectedOutput;
-            item["is_hidden"] = tc.isHidden;
-            items.push_back(std::move(item));
-        }
-        body["testcases"] = std::move(items);
-        return jsonResponse(200, body);
-    });
-
-    // POST /api/questions/<int>/testcases — add a test case to a question
-    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("POST"_method)
-    ([&db](const crow::request& req, int questionId) {
-        auto jsonBody = crow::json::load(req.body);
-        if (!jsonBody) {
-            return jsonError(400, "Invalid JSON body");
-        }
-
-        if (!jsonBody.has("input") || std::string(jsonBody["input"].s()).empty()) {
-            return jsonError(400, "Input is required");
-        }
-        if (!jsonBody.has("expected_output") || std::string(jsonBody["expected_output"].s()).empty()) {
-            return jsonError(400, "Expected output is required");
-        }
-
-        TestCase testCase;
-        testCase.questionId = questionId;
-        testCase.input = jsonBody["input"].s();
-        testCase.expectedOutput = jsonBody["expected_output"].s();
-        testCase.isHidden = jsonBody.has("is_hidden") ? jsonBody["is_hidden"].b() : false;
-
-        int rowId = db.addTestCase(testCase);
-        if (rowId < 0) {
-            return jsonError(500, "Failed to add test case");
-        }
-
-        crow::json::wvalue body;
-        body["success"] = true;
-        body["id"] = rowId;
-        return jsonResponse(200, body);
-    });
-
-    // DELETE /api/testcases/<int> — delete a test case
-    CROW_ROUTE(app, "/api/testcases/<int>").methods("DELETE"_method)
-    ([&db](int id) { 
-        bool deleted = db.deleteTestCase(id);
-
-        crow::json::wvalue body;
-        body["success"] = deleted;
-        body["id"] = id;
         return jsonResponse(200, body);
     });
 
@@ -360,12 +197,148 @@ int main() {
         return jsonResponse(200, body);
     });
 
+    // Admin: questions
+    CROW_ROUTE(app, "/api/questions").methods("GET"_method)
+    ([&db](const crow::request& /*req*/) {
+        auto questions = db.getQuestions();
+
+        crow::json::wvalue body;
+        std::vector<crow::json::wvalue> items;
+        for (const auto& q : questions) {
+            crow::json::wvalue item;
+            item["id"] = q.id;
+            item["title"] = q.title;
+            item["description"] = q.description;
+            item["category"] = q.category;
+            item["difficulty"] = q.difficulty;
+            item["createdAt"] = q.createdAt;
+            items.push_back(std::move(item));
+        }
+        body["questions"] = std::move(items);
+        return jsonResponse(200, body);
+    });
+
+    CROW_ROUTE(app, "/api/questions").methods("POST"_method)
+    ([&db](const crow::request& req) {
+        auto body = crow::json::load(req.body);
+        if (!body || !body.has("title")) {
+            return jsonError(400, "Missing 'title'");
+        }
+
+        std::string title       = body["title"].s();
+        std::string description = body.has("description") ? std::string(body["description"].s()) : "";
+        std::string category    = body.has("category")    ? std::string(body["category"].s())    : "";
+        std::string difficulty  = body.has("difficulty")  ? std::string(body["difficulty"].s())  : "";
+
+        if (title.empty()) {
+            return jsonError(400, "Empty title");
+        }
+
+        int id = db.addQuestion(title, description, category, difficulty);
+        if (id < 0) {
+            return jsonError(500, "Failed to save question");
+        }
+
+        crow::json::wvalue res;
+        res["success"] = true;
+        res["id"] = id;
+        return jsonResponse(200, res);
+    });
+
+    CROW_ROUTE(app, "/api/questions/<int>").methods("PUT"_method)
+    ([&db](const crow::request& req, int id) {
+        auto body = crow::json::load(req.body);
+        if (!body || !body.has("title")) {
+            return jsonError(400, "Missing 'title'");
+        }
+
+        std::string title       = body["title"].s();
+        std::string description = body.has("description") ? std::string(body["description"].s()) : "";
+        std::string category    = body.has("category")    ? std::string(body["category"].s())    : "";
+        std::string difficulty  = body.has("difficulty")  ? std::string(body["difficulty"].s())  : "";
+
+        if (title.empty()) {
+            return jsonError(400, "Empty title");
+        }
+
+        if (!db.updateQuestion(id, title, description, category, difficulty)) {
+            return jsonError(500, "Failed to update question");
+        }
+
+        crow::json::wvalue res;
+        res["success"] = true;
+        return jsonResponse(200, res);
+    });
+
+    CROW_ROUTE(app, "/api/questions/<int>").methods("DELETE"_method)
+    ([&db](const crow::request& /*req*/, int id) {
+        if (!db.deleteQuestion(id)) {
+            return jsonError(500, "Failed to delete question");
+        }
+
+        crow::json::wvalue res;
+        res["success"] = true;
+        return jsonResponse(200, res);
+    });
+
+    // Admin: test cases
+    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("GET"_method)
+    ([&db](const crow::request& /*req*/, int questionId) {
+        auto testcases = db.getTestCases(questionId);
+
+        crow::json::wvalue body;
+        std::vector<crow::json::wvalue> items;
+        for (const auto& t : testcases) {
+            crow::json::wvalue item;
+            item["id"] = t.id;
+            item["question_id"] = t.questionId;
+            item["input"] = t.input;
+            item["expected_output"] = t.expectedOutput;
+            item["is_hidden"] = t.isHidden;
+            items.push_back(std::move(item));
+        }
+        body["testcases"] = std::move(items);
+        return jsonResponse(200, body);
+    });
+
+    CROW_ROUTE(app, "/api/questions/<int>/testcases").methods("POST"_method)
+    ([&db](const crow::request& req, int questionId) {
+        auto body = crow::json::load(req.body);
+        if (!body) {
+            return jsonError(400, "Invalid JSON");
+        }
+
+        std::string input          = body.has("input")          ? std::string(body["input"].s())          : "";
+        std::string expectedOutput = body.has("expected_output") ? std::string(body["expected_output"].s()) : "";
+        bool isHidden              = body.has("is_hidden")       ? (body["is_hidden"].b() || body["is_hidden"].t() == crow::json::type::True) : false;
+
+        int id = db.addTestCase(questionId, input, expectedOutput, isHidden);
+        if (id < 0) {
+            return jsonError(500, "Failed to save test case");
+        }
+
+        crow::json::wvalue res;
+        res["success"] = true;
+        res["id"] = id;
+        return jsonResponse(200, res);
+    });
+
+    CROW_ROUTE(app, "/api/testcases/<int>").methods("DELETE"_method)
+    ([&db](const crow::request& /*req*/, int id) {
+        if (!db.deleteTestCase(id)) {
+            return jsonError(500, "Failed to delete test case");
+        }
+
+        crow::json::wvalue res;
+        res["success"] = true;
+        return jsonResponse(200, res);
+    });
+
     unsigned int threads = std::thread::hardware_concurrency();
     if (threads == 0) threads = 4;
 
     std::cout << "Server running on http://0.0.0.0:" << config.port
               << " (" << threads << " threads)" << std::endl;
-
     app.bindaddr("0.0.0.0").port(config.port).concurrency(threads).run();
 
     std::cout << "Server stopped." << std::endl;

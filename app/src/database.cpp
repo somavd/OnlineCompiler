@@ -19,23 +19,26 @@ CREATE TABLE IF NOT EXISTS submissions (
     timed_out   INTEGER DEFAULT 0,
     created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_lang ON submissions(language);
+CREATE INDEX IF NOT EXISTS idx_time ON submissions(created_at);
+
 CREATE TABLE IF NOT EXISTS questions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     title       TEXT    NOT NULL,
     description TEXT    DEFAULT '',
-    category    TEXT    NOT NULL,
-    difficulty  TEXT    NOT NULL
+    category    TEXT    DEFAULT '',
+    difficulty  TEXT    DEFAULT '',
+    created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE IF NOT EXISTS test_cases (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     question_id     INTEGER NOT NULL,
-    input           TEXT    NOT NULL,
-    expected_output TEXT    NOT NULL,
+    input           TEXT    DEFAULT '',
+    expected_output TEXT    DEFAULT '',
     is_hidden       INTEGER DEFAULT 0,
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS idx_lang ON submissions(language);
-CREATE INDEX IF NOT EXISTS idx_time ON submissions(created_at);
 CREATE INDEX IF NOT EXISTS idx_question_id ON test_cases(question_id);
 )";
 
@@ -57,8 +60,6 @@ Database::Database(const std::string& path) {
     // Enable WAL mode for better concurrent read performance
     sqlite3_exec(db_, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
     sqlite3_exec(db_, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr);
-    // Enable foreign key constraints for cascade delete
-    sqlite3_exec(db_, "PRAGMA foreign_keys=ON;", nullptr, nullptr, nullptr);
 
     init();
 }
@@ -168,13 +169,41 @@ std::vector<Submission> Database::getSubmissions(int limit, const std::string& l
     return results;
 }
 
-bool Database::addQuestion(const Question& question) {
-    std::lock_guard<std::mutex> lock(mutex_);
+// Question management
 
-    const char* sql = R"(
-        INSERT INTO questions (title, description, category, difficulty)
-        VALUES (?, ?, ?, ?)
-    )";
+int Database::addQuestion(const std::string& title, const std::string& description,
+                          const std::string& category, const std::string& difficulty) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const char* sql = "INSERT INTO questions (title, description, category, difficulty) VALUES (?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
+        return -1;
+    }
+
+    sqlite3_bind_text(stmt, 1, title.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, difficulty.c_str(), -1, SQLITE_TRANSIENT);
+
+    rc = sqlite3_step(stmt);
+    int rowId = -1;
+    if (rc == SQLITE_DONE) {
+        rowId = static_cast<int>(sqlite3_last_insert_rowid(db_));
+    } else {
+        std::cerr << "DB insert error: " << sqlite3_errmsg(db_) << std::endl;
+    }
+
+    sqlite3_finalize(stmt);
+    return rowId;
+}
+
+bool Database::updateQuestion(int id, const std::string& title, const std::string& description,
+                              const std::string& category, const std::string& difficulty) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const char* sql = "UPDATE questions SET title = ?, description = ?, category = ?, difficulty = ? WHERE id = ?";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
@@ -183,31 +212,38 @@ bool Database::addQuestion(const Question& question) {
         return false;
     }
 
-    sqlite3_bind_text(stmt, 1, question.title.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, question.description.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, question.category.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 4, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 1, title.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, category.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, difficulty.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, id);
 
     rc = sqlite3_step(stmt);
-    bool success = (rc == SQLITE_DONE);
-    if (!success) {
-        std::cerr << "DB insert error: " << sqlite3_errmsg(db_) << std::endl;
-    }
-
+    bool ok = (rc == SQLITE_DONE);
     sqlite3_finalize(stmt);
-    return success;
+    return ok;
+}
+
+bool Database::deleteQuestion(int id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const char* sql = "DELETE FROM questions WHERE id = ?";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, id);
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
+    return ok;
 }
 
 std::vector<Question> Database::getQuestions() {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<Question> results;
 
-    const char* sql = R"(
-        SELECT id, title, description, category, difficulty
-        FROM questions
-        ORDER BY id ASC
-    )";
-
+    const char* sql = "SELECT id, title, description, category, difficulty, created_at FROM questions ORDER BY id DESC";
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
@@ -222,11 +258,12 @@ std::vector<Question> Database::getQuestions() {
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         Question q;
-        q.id = sqlite3_column_int(stmt, 0);
-        q.title = getText(stmt, 1);
+        q.id          = sqlite3_column_int(stmt, 0);
+        q.title       = getText(stmt, 1);
         q.description = getText(stmt, 2);
-        q.category = getText(stmt, 3);
-        q.difficulty = getText(stmt, 4);
+        q.category    = getText(stmt, 3);
+        q.difficulty  = getText(stmt, 4);
+        q.createdAt   = getText(stmt, 5);
         results.push_back(std::move(q));
     }
 
@@ -234,72 +271,12 @@ std::vector<Question> Database::getQuestions() {
     return results;
 }
 
-bool Database::updateQuestion(const Question& question) {
+// Test case management
+
+int Database::addTestCase(int questionId, const std::string& input,
+                          const std::string& expectedOutput, bool isHidden) {
     std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* sql = R"(
-        UPDATE questions
-        SET title = ?, description = ?, category = ?, difficulty = ?
-        WHERE id = ?
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
-
-    sqlite3_bind_text(stmt, 1, question.title.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, question.description.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, question.category.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 4, question.difficulty.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 5, question.id);
-
-    rc = sqlite3_step(stmt);
-    bool success = (rc == SQLITE_DONE) && (sqlite3_changes(db_) > 0);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "DB update error: " << sqlite3_errmsg(db_) << std::endl;
-    }
-
-    sqlite3_finalize(stmt);
-    return success;
-}
-
-bool Database::deleteQuestion(int id) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* sql = R"(
-        DELETE FROM questions
-        WHERE id = ?
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, id);
-
-    rc = sqlite3_step(stmt);
-    bool success = (rc == SQLITE_DONE);
-    if (!success) {
-        std::cerr << "DB delete error: " << sqlite3_errmsg(db_) << std::endl;
-    }
-
-    sqlite3_finalize(stmt);
-    return success;
-}
-
-int Database::addTestCase(const TestCase& testCase) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* sql = R"(
-        INSERT INTO test_cases (question_id, input, expected_output, is_hidden)
-        VALUES (?, ?, ?, ?)
-    )";
+    const char* sql = "INSERT INTO test_cases (question_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)";
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
@@ -308,10 +285,10 @@ int Database::addTestCase(const TestCase& testCase) {
         return -1;
     }
 
-    sqlite3_bind_int(stmt, 1, testCase.questionId);
-    sqlite3_bind_text(stmt, 2, testCase.input.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 3, testCase.expectedOutput.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 4, testCase.isHidden ? 1 : 0);
+    sqlite3_bind_int(stmt, 1, questionId);
+    sqlite3_bind_text(stmt, 2, input.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, expectedOutput.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 4, isHidden ? 1 : 0);
 
     rc = sqlite3_step(stmt);
     int rowId = -1;
@@ -325,17 +302,26 @@ int Database::addTestCase(const TestCase& testCase) {
     return rowId;
 }
 
+bool Database::deleteTestCase(int id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const char* sql = "DELETE FROM test_cases WHERE id = ?";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, id);
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
 std::vector<TestCase> Database::getTestCases(int questionId) {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<TestCase> results;
 
-    const char* sql = R"(
-        SELECT id, question_id, input, expected_output, is_hidden
-        FROM test_cases
-        WHERE question_id = ?
-        ORDER BY id ASC
-    )";
-
+    const char* sql = "SELECT id, question_id, input, expected_output, is_hidden FROM test_cases WHERE question_id = ?";
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
@@ -351,73 +337,15 @@ std::vector<TestCase> Database::getTestCases(int questionId) {
     };
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        TestCase tc;
-        tc.id = sqlite3_column_int(stmt, 0);
-        tc.questionId = sqlite3_column_int(stmt, 1);
-        tc.input = getText(stmt, 2);
-        tc.expectedOutput = getText(stmt, 3);
-        tc.isHidden = sqlite3_column_int(stmt, 4) != 0;
-        results.push_back(std::move(tc));
+        TestCase t;
+        t.id             = sqlite3_column_int(stmt, 0);
+        t.questionId     = sqlite3_column_int(stmt, 1);
+        t.input          = getText(stmt, 2);
+        t.expectedOutput = getText(stmt, 3);
+        t.isHidden       = sqlite3_column_int(stmt, 4) != 0;
+        results.push_back(std::move(t));
     }
 
     sqlite3_finalize(stmt);
     return results;
-}
-
-bool Database::updateTestCase(const TestCase& testCase) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* sql = R"(
-        UPDATE test_cases
-        SET input = ?, expected_output = ?, is_hidden = ?
-        WHERE id = ?
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
-
-    sqlite3_bind_text(stmt, 1, testCase.input.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, testCase.expectedOutput.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 3, testCase.isHidden ? 1 : 0);
-    sqlite3_bind_int(stmt, 4, testCase.id);
-
-    rc = sqlite3_step(stmt);
-    bool success = (rc == SQLITE_DONE) && (sqlite3_changes(db_) > 0);
-    if (rc != SQLITE_DONE) {
-        std::cerr << "DB update error: " << sqlite3_errmsg(db_) << std::endl;
-    }
-
-    sqlite3_finalize(stmt);
-    return success;
-}
-
-bool Database::deleteTestCase(int id) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    const char* sql = R"(
-        DELETE FROM test_cases
-        WHERE id = ?
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::cerr << "DB prepare error: " << sqlite3_errmsg(db_) << std::endl;
-        return false;
-    }
-
-    sqlite3_bind_int(stmt, 1, id);
-
-    rc = sqlite3_step(stmt);
-    bool success = (rc == SQLITE_DONE);
-    if (!success) {
-        std::cerr << "DB delete error: " << sqlite3_errmsg(db_) << std::endl;
-    }
-
-    sqlite3_finalize(stmt);
-    return success;
 }
