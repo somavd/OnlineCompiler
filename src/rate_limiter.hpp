@@ -7,8 +7,8 @@
 
 class RateLimiter {
 public:
-    RateLimiter(int windowSeconds, int maxRequests)
-        : windowSeconds_(windowSeconds), maxRequests_(maxRequests) {}
+    RateLimiter(int windowSeconds, int maxRequests, size_t maxEntries = 10000)
+        : windowSeconds_(windowSeconds), maxRequests_(maxRequests), maxEntries_(maxEntries) {}
 
     // Returns true if request is allowed
     bool allow(const std::string& clientIp);
@@ -24,6 +24,7 @@ private:
 
     int windowSeconds_;
     int maxRequests_;
+    size_t maxEntries_;
     std::mutex mutex_;
     std::unordered_map<std::string, Bucket> buckets_;
     int callsSincePurge_ = 0;

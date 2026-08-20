@@ -9,14 +9,17 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <thread>
 #include <csignal>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
-// JSON response helper — sets Content-Type properly
+// JSON response helper — sets Content-Type and CORS properly
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
     crow::response res(code, body.dump());
     res.set_header("Content-Type", "application/json");
+    res.set_header("Access-Control-Allow-Origin", "*");
     return res;
 }
 
@@ -52,8 +55,9 @@ static std::string getMimeType(const std::string& ext) {
 // Global app pointer for graceful shutdown
 static crow::SimpleApp* g_app = nullptr;
 
-static void signalHandler(int sig) {
-    std::cout << "\nShutting down (signal " << sig << ")..." << std::endl;
+static void signalHandler(int /*sig*/) {
+    const char msg[] = "\nShutdown requested...\n";
+    (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
     if (g_app) g_app->stop();
 }
 
@@ -91,13 +95,11 @@ int main() {
     CROW_ROUTE(app, "/public/<path>")([](const std::string& filePath) {
         std::string fullPath = "public/" + filePath;
 
-        // Prevent path traversal
-        if (filePath.find("..") != std::string::npos) {
+        // Prevent path traversal via canonical path check
+        auto canonical = fs::weakly_canonical(fullPath);
+        auto publicRoot = fs::weakly_canonical("public");
+        if (canonical.string().rfind(publicRoot.string(), 0) != 0) {
             return crow::response(403, "Forbidden");
-        }
-
-        if (!fs::exists(fullPath)) {
-            return crow::response(404, "Not found");
         }
 
         auto [found, content] = readFileContents(fullPath);
@@ -186,8 +188,12 @@ int main() {
         return jsonResponse(200, body);
     });
 
-    std::cout << "Server running on http://localhost:" << config.port << std::endl;
-    app.port(config.port).multithreaded().run();
+    unsigned int threads = std::thread::hardware_concurrency();
+    if (threads == 0) threads = 4;
+
+    std::cout << "Server running on http://0.0.0.0:" << config.port
+              << " (" << threads << " threads)" << std::endl;
+    app.bindaddr("0.0.0.0").port(config.port).concurrency(threads).run();
 
     std::cout << "Server stopped." << std::endl;
     return 0;

@@ -14,6 +14,14 @@ bool RateLimiter::allow(const std::string& clientIp) {
 
     auto it = buckets_.find(clientIp);
     if (it == buckets_.end()) {
+        // Enforce memory cap: reject new IPs if at capacity
+        if (buckets_.size() >= maxEntries_) {
+            purgeStale(now);
+            callsSincePurge_ = 0;
+            if (buckets_.size() >= maxEntries_) {
+                return false;
+            }
+        }
         buckets_[clientIp] = {1, now};
         return true;
     }
