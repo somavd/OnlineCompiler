@@ -2,8 +2,6 @@
    ADMIN DASHBOARD - DARK THEME
 =========================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-
 /* RESET & BASE */
 * {
     margin: 0;
@@ -12,7 +10,7 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #0b1120;
     color: #ffffff;
     overflow-x: hidden;
@@ -203,7 +201,7 @@ select {
     border: 1px solid #374151;
     border-radius: 8px;
     font-size: 14px;
-    font-family: 'Poppins', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     transition: all 0.3s ease;
 }
 

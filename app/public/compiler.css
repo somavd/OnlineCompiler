@@ -2,8 +2,6 @@
    COMPILER - VS CODE THEME
 =========================== */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Poppins:wght@400;500;600;700&display=swap');
-
 /* RESET & BASE */
 * {
     box-sizing: border-box;
@@ -13,7 +11,7 @@ body {
     margin: 0;
     padding: 0;
     background: #0b1120;
-    font-family: 'Poppins', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #e2e8f0;
     overflow-x: hidden;
 }
@@ -161,20 +159,6 @@ button:disabled {
     border-color: #4b5563;
 }
 
-/* LOGOUT BUTTON */
-#logoutBtn {
-    background: #dc2626;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    margin-top: 15px;
-}
-
-#logoutBtn:hover {
-    background: #b91c1c;
-    box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
-}
-
 /* HISTORY REFRESH BUTTON */
 #refreshHistory {
     background: #2563eb;
@@ -256,7 +240,7 @@ button:disabled {
     padding: 15px;
     background: #0f172a;
     color: #e5e7eb;
-    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
     line-height: 1.6;
     border: none;
@@ -272,7 +256,7 @@ button:disabled {
 #stderr {
     margin: 0;
     padding: 15px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 13px;
     white-space: pre-wrap;
     word-break: break-word;
@@ -319,7 +303,7 @@ button:disabled {
     color: #e2e8f0;
     padding: 14px;
     font-size: 14px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 #userInput::placeholder {
