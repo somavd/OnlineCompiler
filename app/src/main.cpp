@@ -11,9 +11,16 @@
 #include <iostream>
 #include <thread>
 #include <csignal>
+#include <cstdlib>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
+
+static fs::path getPublicDir() {
+    const char* env = std::getenv("PUBLIC_DIR");
+    if (env) return fs::weakly_canonical(env);
+    return fs::weakly_canonical("public");
+}
 
 // JSON response helper — sets Content-Type and CORS properly
 static crow::response jsonResponse(int code, crow::json::wvalue& body) {
@@ -80,9 +87,11 @@ int main() {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
+    const fs::path publicDir = getPublicDir();
+
     // Serve frontend — index.html at root
-    CROW_ROUTE(app, "/")([]() {
-        auto [found, content] = readFileContents("public/index.html");
+    CROW_ROUTE(app, "/")([&publicDir]() {
+        auto [found, content] = readFileContents((publicDir / "index.html").string());
         if (!found) {
             return crow::response(404, "Frontend not found");
         }
@@ -92,17 +101,17 @@ int main() {
     });
 
     // Serve static files: /public/<path>
-    CROW_ROUTE(app, "/public/<path>")([](const std::string& filePath) {
-        std::string fullPath = "public/" + filePath;
+    CROW_ROUTE(app, "/public/<path>")([&publicDir](const std::string& filePath) {
+        fs::path fullPath = publicDir / filePath;
 
         // Prevent path traversal via canonical path check
         auto canonical = fs::weakly_canonical(fullPath);
-        auto publicRoot = fs::weakly_canonical("public");
+        auto publicRoot = fs::weakly_canonical(publicDir);
         if (canonical.string().rfind(publicRoot.string(), 0) != 0) {
             return crow::response(403, "Forbidden");
         }
 
-        auto [found, content] = readFileContents(fullPath);
+        auto [found, content] = readFileContents(fullPath.string());
         if (!found) {
             return crow::response(404, "Not found");
         }

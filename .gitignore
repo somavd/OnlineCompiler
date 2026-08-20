@@ -1,4 +1,6 @@
-build/
+app/build/
+app/tmp/
+app/data/
 tmp/
 data/
 .env
