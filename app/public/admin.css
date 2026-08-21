@@ -73,13 +73,21 @@ body {
 }
 
 .sidebar li {
-    padding: 14px 16px;
+    padding: 0;
     margin: 8px 0;
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.3s ease;
     color: #94a3b8;
     font-weight: 500;
+}
+
+.sidebar a {
+    display: block;
+    padding: 14px 16px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 8px;
 }
 
 .sidebar li:hover {
@@ -130,6 +138,13 @@ body {
 /* ===========================
    HEADINGS
 =========================== */
+h1 {
+    color: #ffffff;
+    font-size: 2rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
 h2 {
     color: #ffffff;
     font-size: 1.8rem;
@@ -172,6 +187,11 @@ h3 {
     transform: translateY(-2px);
 }
 
+.dashboard-header p {
+    color: #94a3b8;
+    margin-bottom: 25px;
+}
+
 .card h3 {
     color: #94a3b8;
     font-size: 0.85rem;
@@ -192,7 +212,8 @@ h3 {
    FORMS
 =========================== */
 input,
-select {
+select,
+textarea {
     width: 100%;
     padding: 12px 16px;
     margin-bottom: 14px;
@@ -205,15 +226,22 @@ select {
     transition: all 0.3s ease;
 }
 
+textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
     outline: none;
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     background: #111827;
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
     color: #6b7280;
 }
 
@@ -464,4 +492,48 @@ tbody tr:last-child td {
         padding: 8px 10px;
         font-size: 12px;
     }
+}
+
+/* ===========================
+   STATUS / QUESTION DETAIL
+=========================== */
+.status {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+
+.status:empty {
+    display: none;
+}
+
+.status-ok {
+    background: rgba(22, 163, 74, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.status-error {
+    background: rgba(220, 38, 38, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.question-description {
+    color: #d1d5db;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.question-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    color: #94a3b8;
+    margin-top: 20px;
+}
+
+.question-meta strong {
+    color: #ffffff;
 }

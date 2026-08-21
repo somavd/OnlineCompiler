@@ -4,7 +4,7 @@ const questionId = urlParams.get('id');
 async function loadQuestion() {
     if (!questionId) {
         showError("No question ID provided");
-        location.href = "/public/admin-dashboard.html";
+        location.href = "/public/admin-questions.html";
         return;
     }
 
@@ -16,7 +16,7 @@ async function loadQuestion() {
 
         if (!q) {
             showError("Question not found");
-            location.href = "/public/admin-dashboard.html";
+            location.href = "/public/admin-questions.html";
             return;
         }
 
