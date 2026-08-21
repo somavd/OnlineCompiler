@@ -15,21 +15,30 @@ struct Config {
 
     static Config fromEnv() {
         Config c;
-        auto readInt = [](const char* name, int fallback) -> int {
+        auto readInt = [](const char* name, int fallback, int minVal, int maxVal) -> int {
             auto* v = std::getenv(name);
             if (!v) return fallback;
-            try { return std::stoi(v); }
+            try {
+                int val = std::stoi(v);
+                if (val < minVal || val > maxVal) {
+                    std::cerr << "WARNING: " << name << "=" << val
+                              << " out of range [" << minVal << "," << maxVal
+                              << "], using default " << fallback << std::endl;
+                    return fallback;
+                }
+                return val;
+            }
             catch (...) {
                 std::cerr << "WARNING: Invalid integer for " << name
                           << "=\"" << v << "\", using default " << fallback << std::endl;
                 return fallback;
             }
         };
-        c.port                   = readInt("PORT", c.port);
-        c.dockerTimeoutSeconds   = readInt("DOCKER_TIMEOUT_SECONDS", c.dockerTimeoutSeconds);
-        c.dockerPidsLimit        = readInt("DOCKER_PIDS_LIMIT", c.dockerPidsLimit);
-        c.rateLimitWindowSeconds = readInt("RATE_LIMIT_WINDOW_SECONDS", c.rateLimitWindowSeconds);
-        c.rateLimitMaxRequests   = readInt("RATE_LIMIT_MAX_REQUESTS", c.rateLimitMaxRequests);
+        c.port                   = readInt("PORT", c.port, 1, 65535);
+        c.dockerTimeoutSeconds   = readInt("DOCKER_TIMEOUT_SECONDS", c.dockerTimeoutSeconds, 1, 300);
+        c.dockerPidsLimit        = readInt("DOCKER_PIDS_LIMIT", c.dockerPidsLimit, 1, 1000);
+        c.rateLimitWindowSeconds = readInt("RATE_LIMIT_WINDOW_SECONDS", c.rateLimitWindowSeconds, 1, 3600);
+        c.rateLimitMaxRequests   = readInt("RATE_LIMIT_MAX_REQUESTS", c.rateLimitMaxRequests, 1, 10000);
         if (auto* v = std::getenv("DOCKER_MEMORY_LIMIT")) c.dockerMemoryLimit = v;
         if (auto* v = std::getenv("DOCKER_CPU_LIMIT"))     c.dockerCpuLimit = v;
         return c;

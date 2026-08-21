@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | Online Compiler</title>
+
+<link rel="stylesheet" href="/public/admin.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h2>Compiler Admin</h2>
+
+        <ul>
+            <li class="active"><a href="/public/admin-dashboard.html">Dashboard</a></li>
+            <li><a href="/public/admin-questions.html">Questions</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+        <div class="dashboard-header">
+            <h2>Admin Dashboard</h2>
+            <p>Manage coding questions and test cases for the compiler.</p>
+        </div>
+
+        <div class="cards">
+            <div class="card">
+                <h3>Total Questions</h3>
+                <h2 id="questionCount">0</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/public/shared.js"></script>
+<script src="/public/admin.js"></script>
+
+</body>
+</html>

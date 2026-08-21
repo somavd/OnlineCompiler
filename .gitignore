@@ -1,12 +1,19 @@
-app/build/
-app/tmp/
-app/data/
-tmp/
-data/
+# Build output (any location)
+**/build/
+**/tmp/
+**/data/
+
+# Node (frontend tooling, if any)
+**/node_modules/
+
+# Environment & secrets
 .env
+**/.env
+
+# Logs & artifacts
 *.log
 *.pdf
-.DS_Store
 *.o
 *.d
 compile_commands.json
+.DS_Store

@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Online Code Editor</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/dracula.min.css">
-  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="stylesheet" href="/public/compiler.css">
 </head>
 <body>
+
   <div class="container">
     <header>
       <h1>Online Code Editor</h1>
@@ -22,6 +21,7 @@
         <option value="javascript">JavaScript</option>
       </select>
       <div class="toolbar-actions">
+        <a href="/public/admin-dashboard.html">Admin</a>
         <button id="runBtn" onclick="runCode()">&#9654; Run</button>
         <button id="clearBtn" onclick="clearCode()">Clear</button>
         <span id="status" class="status"></span>
@@ -31,7 +31,7 @@
     <div class="editor-wrapper">
       <div class="panel panel-editor">
         <div class="panel-header">Code</div>
-        <textarea id="editor"></textarea>
+        <textarea id="editor" placeholder="Write your code here..."></textarea>
       </div>
       <div class="panel panel-output">
         <div class="panel-header">Output</div>
@@ -57,10 +57,6 @@
     <div class="shortcut-hint">Ctrl+Enter to run</div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/clike/clike.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/python/python.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
   <script src="/public/script.js"></script>
 </body>
 </html>
